@@ -1,0 +1,2284 @@
+# NOVÝ RPA WINUI3 COMPONENTS PACKAGE - KOMPLETNÁ ARCHITEKTÚRNA DOKUMENTÁCIA
+
+> **Pre vývoj nového, správne navrhnutého WinUI3 balíka komponentov pre .NET 8**  
+> **Aktualizované: August 2025**  
+> **STAV: 🚧 V IMPLEMENTÁCII - LoggerComponent ✅ dokončený, AdvancedWinUiDataGrid 🔧 v progrese**
+
+---
+
+## 📋 OBSAH
+
+1. [Projekt Overview](#projekt-overview)
+2. [Architektúrne Rozhodnutia](#architektúrne-rozhodnutia)
+3. [Štruktúra Balíka](#štruktúra-balíka)
+4. [Komponenty Detailne](#komponenty-detailne)
+5. [Public API Design](#public-api-design)
+6. [Dependencies & Package Management](#dependencies--package-management)
+7. [Testovanie & Demo Aplikácia](#testovanie--demo-aplikácia)
+8. [Build & Deployment](#build--deployment)
+9. [Aktuálny Stav Implementácie](#aktuálny-stav-implementácie)
+10. [Implementačný Plán](#implementačný-plán)  
+11. [Lessons Learned z Aktuálneho Projektu](#lessons-learned-z-aktuálneho-projektu)
+
+---
+
+## 📊 PROJEKT OVERVIEW
+
+### **🎯 Cieľ Projektu**
+Vytvoriť **profesionálny WinUI3 balík komponentov** pre .NET 8, ktorý bude:
+- ✅ **Modulárny** - komponenty nezávislé jeden od druhého
+- ✅ **Rozšíriteľný** - ľahko pridávanie nových komponentov
+- ✅ **Production-ready** - enterprise kvalita s kompletnou funkcionalitou
+- ✅ **Správne architektovaný** - žiadne god-level súbory od začiatku
+- ✅ **Package-centric** - testovanie cez package reference, nie project reference
+
+### **🏗️ Základné Vlastnosti**
+- **Framework**: WinUI3 + .NET 8.0-windows
+- **Package Type**: NuGet balík s viacerými komponentmi
+- **Namespace Pattern**: `RpaWinUiComponentsPackage.{ComponentName}.{Method}`
+- **Závislosti**: Iba Microsoft.Extensions.Logging.Abstractions (nie full Logging)
+- **Testovanie**: Samostatná demo aplikácia s package reference
+- **Architektúra**: Service-oriented s strict separation of concerns
+
+---
+
+## 🏛️ ARCHITEKTÚRNE ROZHODNUTIA
+
+### **📦 Package-First Approach**
+```xml
+<!-- Demo aplikácia MUSÍ používať package reference -->
+<PackageReference Include="RpaWinUiComponentsPackage" Version="1.0.0" />
+<!-- NIE project reference! -->
+```
+
+**Dôvod**: Testujeme balík v jeho finálnom stave, nie development verzii.
+
+### **🧩 Modular Component Design**
+```
+RpaWinUiComponentsPackage/
+├── AdvancedWinUiDataGrid/          # Komponente #1
+├── LoggerComponent/                # Komponente #2  
+├── {NewComponent}/                 # Komponente #3 (budúcnosť)
+└── {AnotherComponent}/             # Komponente #4 (budúcnosť)
+```
+
+**Každý komponent je nezávislý:**
+- Vlastné namespace
+- Vlastné services a modely
+- Žiadne cross-component dependencies
+- Vlastné utilities a helpery
+
+### **🎯 Public API Pattern**
+```csharp
+// Štandardný pattern pre všetky komponenty
+RpaWinUiComponentsPackage.{ComponentName}.{Method}()
+
+// Príklady:
+RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.InitializeAsync()
+RpaWinUiComponentsPackage.LoggerComponent.Info()
+RpaWinUiComponentsPackage.NewComponent.SomeMethod()
+```
+
+### **📁 Anti-God-Level File Strategy**
+**Od prvého dňa vývoja:**
+- **Rozumná veľkosť súborov** - preferujeme menšie súbory, ale nebudeme robiť umelé delenie ak súbor má logickú súvislosť
+- **Partial classes** pre veľké komponenty hneď od začiatku
+- **Logical separation** - Services, Models, UI, Utilities
+- **Single responsibility** - každý súbor má jednu úlohu
+- **Ak súbor prekročí ~800-1000 riadkov** - rozdeliť na logické celky
+
+---
+
+## 📂 ŠTRUKTÚRA BALÍKA
+
+### **🏗️ Root Level Package Structure**
+```
+RpaWinUiComponentsPackage/
+├── 📄 RpaWinUiComponentsPackage.csproj    # Main package project
+├── 📄 Directory.Build.props               # Shared build properties
+├── 📄 README.md                           # Package documentation
+├── 📄 CHANGELOG.md                        # Version history
+├── 📄 LICENSE.md                          # MIT License
+├── 📁 AdvancedWinUiDataGrid/              # Component #1
+├── 📁 LoggerComponent/                    # Component #2
+├── 📁 {FutureComponent}/                  # Component #3
+└── 📁 {AnotherComponent}/                 # Component #4
+```
+
+### **🎯 Component Internal Structure**
+**Každý komponent má identickú štruktúru:**
+
+```
+{ComponentName}/
+├── 📁 Controls/                    # UI komponenty (UserControls, Custom Controls)
+│   ├── Main{Component}.xaml/.cs    # Hlavný control
+│   ├── {Component}.PublicAPI.cs   # Partial class - všetky public metódy
+│   ├── {Component}.Core.cs        # Partial class - core infrastructure
+│   ├── {Component}.Services.cs    # Partial class - service initialization
+│   └── Helpers/                   # UI helper controls
+├── 📁 Services/                   # Business logic services
+│   ├── Core/                      # Core services (Data, Export, Navigation)
+│   ├── Operations/                # CRUD operations
+│   ├── UI/                        # UI-specific services  
+│   ├── Validation/                # Validation services
+│   ├── Optimization/              # Performance services
+│   └── Interfaces/                # Service contracts
+├── 📁 Models/                     # Data models
+│   ├── Core/                      # Core data models
+│   ├── Configuration/             # Configuration classes
+│   ├── Events/                    # Event models
+│   └── Validation/                # Validation models
+├── 📁 Utilities/                  # Helper classes
+│   ├── Converters/                # XAML value converters
+│   ├── Helpers/                   # Utility helpers
+│   └── Extensions/                # Extension methods
+├── 📁 Themes/                     # XAML resources a themes
+│   └── Generic.xaml               # Default theme
+└── 📄 {ComponentName}API.md       # Component-specific API documentation
+```
+
+---
+
+## 🧩 KOMPONENTY DETAILNE
+
+### **📊 1. AdvancedWinUiDataGrid**
+
+**Namespace**: `RpaWinUiComponentsPackage.AdvancedWinUiDataGrid`
+
+**🏗️ Modulárna Architektúra:**
+```
+AdvancedWinUiDataGrid
+├── 📊 Core Module (DynamicTable)           # Základ - ItemRepeater-based dynamic table
+│   ├── Cell (base unit)                    # Základná jednotka
+│   ├── Row (collection of cells)           # Riadok = kolekcia células  
+│   ├── Column (virtual grouping)           # Stĺpec = virtuálne zoskupenie
+│   └── Table (cell matrix management)      # Tabuľka = matrix management
+├── ✅ Validation Module                     # Real-time + bulk validation
+├── 🔍 Search Module                        # Advanced search engine
+├── 🎛️ Filter Module                       # Dynamic filtering system  
+├── 📊 Sort Module                          # Multi-column sorting
+├── 📥 Import/Export Module                 # Data exchange
+├── 🎨 Theming Module                       # Runtime color customization
+├── ⚡ Performance Module                   # Memory, caching, optimization
+└── 🧭 Navigation Module                    # Cell/row/column navigation
+```
+
+**🎯 Dual Usage Modes:**
+```csharp
+// MODE 1: UI Application Usage (s UserControl)
+var dataGrid = new AdvancedDataGrid();  // WinUI UserControl
+await dataGrid.InitializeAsync(columns);
+myWindow.Content = dataGrid;
+
+// MODE 2: Headless Script Usage (bez UI)
+var tableCore = new DynamicTableCore();  // Core bez UI
+await tableCore.InitializeAsync(columns);
+await tableCore.ImportFromExcelAsync(data);
+var results = await tableCore.SearchAsync("term");
+// Skript pracuje s dátami bez UI rendering
+```
+
+**🏗️ Core Architecture - Dynamic Table:**
+- **ItemRepeater-based** - virtualizovaný rendering
+- **Cell-centric** - každá bunka je samostatný objekt
+- **Row = Collection<Cell>** - riadky sú kolekcie células
+- **Column = Virtual Grouping** - stĺpce sú virtuálne grouping células
+- **Matrix Management** - inteligentné spravovanie cell matrix
+
+**🚀 Performance & Memory Management:**
+- **Perfect Memory Management** - aggressive GC, weak references, object pooling
+- **Multi-level Caching** - L1 (memory), L2 (compressed), L3 (disk)
+- **Large File Optimization** - streaming, progressive loading, virtualization
+- **Background Processing** - async operations, cancellation tokens
+
+**🎨 Runtime Color Theming:**
+```csharp
+// Aplikácia môže meniť farby za behu
+dataGrid.SetCellBackgroundColor(row, col, Colors.Yellow);
+dataGrid.SetRowColor(rowIndex, Colors.LightBlue);  
+dataGrid.SetColumnHeaderColor("Name", Colors.Green);
+dataGrid.SetValidationErrorColor(Colors.Red);
+dataGrid.SetSelectionColor(Colors.Blue);
+```
+
+**⚡ Smart Validation Modes:**
+```csharp
+// Real-time validation (jednotlivé zmeny)
+dataGrid.OnCellChanged += (cell) => ValidateCell(cell);  // Immediate
+
+// Bulk validation (paste, import)
+await dataGrid.ImportFromExcelAsync(data, bulkValidation: true);
+// 1. Import all data first (fast)
+// 2. Then validate everything (batch)
+
+// Full dataset validation (VŠETKY riadky, nie len zobrazené)
+bool allValid = await dataGrid.AreAllNonEmptyRowsValidAsync();
+// Validuje KOMPLETNE všetky riadky v dataset, nie len viewport
+```
+
+**🔄 Intelligent Row Management:**
+```csharp
+// Definovaný minimálny počet riadkov z aplikácie
+await dataGrid.InitializeAsync(columns, emptyRowsCount: 15);  // Minimum 15 riadkov
+
+// Automatic row expansion
+// Ak paste/import prinesie viac riadkov → tabuľka sa rozšíri
+// Vždy zostane +1 prázdny riadok na konci pre nové dáta
+
+// Smart delete behavior
+// Riadky > definovaný počet: DELETE = zmaže kompletný riadok
+// Riadky <= definovaný počet: DELETE = vyčistí iba obsah (zachová štruktúru)
+```
+
+**⌨️ Complete Keyboard Shortcuts:**
+```csharp
+// === EDIT MODE SHORTCUTS ===
+// ESC           - Zruší zmeny v bunke a ukončí edit mód
+// Enter         - Potvrdí zmeny a zostane na bunke  
+// Shift+Enter   - Vloží nový riadok do bunky (multiline editing)
+// Tab (in edit) - Vloží tab znak do bunky
+
+// === NAVIGATION SHORTCUTS ===
+// Arrow Keys    - Navigácia medzi bunkami s auto-commit zmien
+// Tab           - Ďalšia bunka (doprava → koniec riadku → prvá v novom riadku)
+
+// === SELECTION SHORTCUTS ===
+// Ctrl+A        - Označí všetky bunky (okrem DeleteRows column ak je zapnutý)
+// Shift+Tab     - Predchádzajúca bunka (doľava → začiatok riadku → posledná v predošlom)
+// Ctrl+Home     - Prvá bunka v tabuľke
+// Ctrl+End      - Posledná bunka s dátami
+
+// === COPY/PASTE/CUT SHORTCUTS ===
+// Ctrl+C        - Copy vybraných buniek do clipboardu
+// Ctrl+V        - Paste z clipboardu (s intelligent row expansion)
+// Ctrl+X        - Cut vybraných buniek
+
+// === SELECTION SHORTCUTS ===
+// Ctrl+A        - Vybrať všetky bunky
+// Shift+Click   - Rozšíriť výber do range
+// Ctrl+Click    - Toggle selection (pridať/odobrať z výberu)
+
+// === ROW OPERATIONS ===
+// Delete        - Smart delete (content vs. whole row based on row count)
+// Ctrl+Delete   - Delete kompletný riadok (ak je nad minimum)
+// Insert        - Vloží nový riadok nad aktuálny
+```
+
+**Public API Methods (65+ metód s kompletnejšími parametrami):**
+
+```csharp
+// ===== INICIALIZÁCIA =====
+Task InitializeAsync(
+    List<GridColumnDefinition> columns,
+    IValidationConfiguration? validationConfig = null,
+    GridThrottlingConfig? throttlingConfig = null,
+    int emptyRowsCount = 15,
+    DataGridColorConfig? colorConfig = null,
+    ILogger? logger = null,                    // NULLABLE! Ak null = žiadne logovanie
+    bool enableBatchValidation = false,
+    int maxSearchHistoryItems = 0,
+    bool enableSort = false,
+    bool enableSearch = false, 
+    bool enableFilter = false,
+    int searchHistoryItems = 0,
+    double? minWidth = null,
+    double? minHeight = null,
+    double? maxWidth = null,
+    double? maxHeight = null)
+
+// ===== DATA IMPORT =====
+Task ImportFromDictionaryAsync(
+    List<Dictionary<string, object?>> data,
+    Dictionary<int, bool>? checkboxStates = null,
+    int? startRow = null,
+    bool insertMode = false,
+    TimeSpan? timeout = null,                                    // Default 1 minúta
+    IProgress<ValidationProgress>? validationProgress = null)    // Progress tracking
+// Poznámka: checkboxStates relevantné len ak je CheckBox stĺpec zapnutý
+// Poznámka: insertMode false = replace, true = insert between rows
+// Poznámka: Smart caching validation - validuje len zmenené bunky pre performance
+
+Task ImportFromDataTableAsync(
+    DataTable dataTable,
+    Dictionary<int, bool>? checkboxStates = null,
+    int? startRow = null,
+    bool insertMode = false,
+    TimeSpan? timeout = null,                                    // Default 1 minúta
+    IProgress<ValidationProgress>? validationProgress = null)    // Progress tracking
+// Poznámka: checkboxStates relevantné len ak je CheckBox stĺpec zapnutý
+// Poznámka: insertMode false = replace, true = insert between rows  
+// Poznámka: Smart caching validation - validuje len zmenené bunky pre performance
+
+// ===== DATA EXPORT =====
+Task<List<Dictionary<string, object?>>> ExportToDictionaryAsync(
+    bool includeValidAlerts = false,           // Default false: ValidationAlerts column excluded from export
+    TimeSpan? timeout = null,                  // Optional timeout for large datasets
+    IProgress<ExportProgress>? exportProgress = null)    // Progress tracking for UI
+// Poznámka: includeValidAlerts = true → export obsahuje ValidationAlerts column data
+
+Task<DataTable> ExportToDataTableAsync(
+    bool includeValidAlerts = false,           // Default false: ValidationAlerts column excluded from export
+    TimeSpan? timeout = null,                  // Optional timeout for large datasets
+    IProgress<ExportProgress>? exportProgress = null)    // Progress tracking for UI
+// Poznámka: includeValidAlerts = true → DataTable contains ValidationAlerts column
+
+Task<List<Dictionary<string, object?>>> ExportFilteredToDictionaryAsync(
+    bool includeValidAlerts = false,           // Default false: ValidationAlerts column excluded from export
+    TimeSpan? timeout = null,                  // Optional timeout for large datasets
+    IProgress<ExportProgress>? exportProgress = null)    // Progress tracking for UI
+// Poznámka: includeValidAlerts = true → filtered export includes ValidationAlerts data
+
+Task<DataTable> ExportFilteredToDataTableAsync(
+    bool includeValidAlerts = false,           // Default false: ValidationAlerts column excluded from export
+    TimeSpan? timeout = null,                  // Optional timeout for large datasets
+    IProgress<ExportProgress>? exportProgress = null)    // Progress tracking for UI
+// Poznámka: includeValidAlerts = true → filtered DataTable includes ValidationAlerts column
+
+// ===== VALIDATION =====
+Task<bool> AreAllNonEmptyRowsValidAsync()                    // VALIDUJE VŠETKY riadky v dataset, nie len zobrazené
+Task<BatchValidationResult?> ValidateAllRowsBatchAsync(CancellationToken cancellationToken = default)
+
+// ===== UI UPDATE API =====
+Task RefreshUIAsync()                                        // Force refresh celého UI (re-render všetkých buniek)
+Task UpdateValidationUIAsync()                               // Update len validation visual indicators (borders, tooltips)
+Task UpdateRowUIAsync(int rowIndex)                          // Update UI pre konkrétny riadok
+Task UpdateCellUIAsync(int row, int column)                  // Update UI pre konkrétnu bunku
+Task UpdateColumnUIAsync(string columnName)                  // Update UI pre celý stĺpec
+void InvalidateLayout()                                      // Force layout recalculation (sizing, positioning)
+
+// POZNÁMKA: Validácia Strategy:
+// Real-time validácia: Automaticky pri písaní/editovaní bunky (písmenka v bunke)
+// Batch validácia: Pri import/paste operáciách - najprv batch validácia, potom UI update
+// Public API import: Automaticky sa zavolá batch validácia BEZ UI update (UI update len ak zavolám UI update API)
+// Manual refresh: Po zmene validačných pravidiel - zavolať batch validáciu + UI update API
+
+// POZNÁMKA: UI Update Strategy:
+// - Public API methods NEaktualizujú UI automaticky (script-friendly)
+// - ValidationAlerts column sa vypĺňa vždy (internal data), ale UI sa nerefreshuje
+// - Validation borders sa nastavujú internal, ale vizuálne sa NEzobrazujú
+// - Pre UI refresh: manual volanie UpdateValidationUIAsync(), RefreshUIAsync(), atď.
+// - Script usage: používaj public API bez UI updates
+// - Application usage: public API + manual UI updates podľa potreby
+// - Validation Visual Indicators: Red borders + ValidationAlerts column text (NO tooltips)
+//
+// 📋 DEMO APLIKÁCIA USAGE PATTERN:
+// ```csharp
+// // Demo app musí kombinovať API calls + UI refreshes pre user experience
+// private async void ImportButton_Click()
+// {
+//     await dataGrid.ImportFromDictionaryAsync(data);  // Import dát (headless)
+//     await dataGrid.RefreshUIAsync();  // Manual UI refresh pre user
+//     // Teraz user vidí importované dáta + validation errors
+// }
+//
+// private async void ValidateButton_Click() 
+// {
+//     await dataGrid.ValidateAllRowsBatchAsync();  // Validácia (headless)
+//     await dataGrid.UpdateValidationUIAsync();  // Zobrazenie validation errors
+// }
+// ```
+
+// ===== NAVIGATION =====
+// POZNÁMKA: Navigation/Selection metódy implementované v NavigationModule (pre budúce rozšírenie)
+
+// ===== SEARCH & FILTER =====
+Task<SearchResults?> SearchAsync(
+    string searchTerm,
+    bool caseSensitive = false,
+    bool isRegex = false,
+    bool wholeWord = false,
+    List<string>? targetColumns = null,
+    CancellationToken cancellationToken = default)
+
+Task AddFilterAsync(string filterExpression, bool caseSensitive = false)  // Komplexný multi-column/multi-value filter s AND/OR logiku (prepíše starý)
+Task ClearFiltersAsync()  // Zmaže všetky filtre
+Task ClearSearchHistoryAsync()  // Zmaže search history (ak je zapnutá, inak nič)
+
+// ===== CELL MANIPULATION =====
+Task SetCellValueAsync(int row, int column, object? value)  // Nahradí hodnotu v bunke
+
+// ===== DATA MANAGEMENT =====
+Task ClearAllDataAsync()
+Task SetMinimumRowCountAsync(int minRowCount)                    // Zmení minimálny počet riadkov (intelligent row management)
+void DeleteSelectedRows()                                       // Smart delete - content vs. whole row
+void SmartDeleteRowAsync(int rowIndex)                          // Intelligent delete based on row count
+void DeleteRowsWhere(Func<Dictionary<string, object?>, bool> predicate)
+
+// ===== INTELLIGENT ROW MANAGEMENT =====  
+Task PasteDataAsync(List<Dictionary<string, object?>> data, int startRow, int startColumn)  // Vloží dáta od pozície s auto-expand
+bool IsRowEmpty(int rowIndex)                                   // Kontrola či je riadok prázdny (všetky bunky null/empty)
+int GetMinimumRowCount()                                        // Vráti nastavený minimálny počet riadkov
+int GetActualRowCount()                                         // Skutočný počet riadkov v gridu (intelligent row management)
+Task<int> GetLastDataRowAsync()                                 // Index posledného riadku obsahujúceho dáta (-1 ak všetky prázdne)
+Task CompactRowsAsync()                                         // Odstráni prázdne medzery medzi riadkami s dátami
+
+// ===== DYNAMIC VALIDATION MANAGEMENT =====
+Task RemoveValidationRulesAsync(params string[] columnNames)   // Zmaže validačné pravidlá pre stĺpce
+Task AddValidationRulesAsync(string columnName, List<ValidationRule> rules)  // Pridá pravidlá k existujúcim (alebo vytvorí nové)
+Task ReplaceValidationRulesAsync(Dictionary<string, List<ValidationRule>> columnRules)  // Bulk replace pravidiel pre viac stĺpcov naraz
+Task<List<ColumnInfo>> GetColumnsInfoAsync()                   // Metadata o všetkých stĺpcoch vrátane špeciálnych stĺpcov
+
+// ===== CHECKBOX MANAGEMENT =====
+Task SetCheckboxValuesAsync(Dictionary<int, bool>? checkboxValues = null)  // Nastaví checkbox stavy (null = vyčistí všetky)
+Dictionary<int, bool> GetCheckboxValues()                      // Vráti len checked riadky (rowIndex → true)
+
+// ===== CHECKBOX OPERÁCIE =====
+void UpdateCheckBoxState(int rowIndex, bool isChecked)
+void CheckAllRows()
+void UncheckAllRows()
+Task DeleteAllCheckedRowsAsync()
+int GetCheckedRowsCount()
+List<int> GetCheckedRowIndices()
+void SetCheckBoxStates(bool[] checkboxStates)
+
+// ===== MULTI-SORT =====
+void SetMultiSortConfiguration(MultiSortConfiguration config)
+void SetMultiSortMode(bool enabled)
+List<MultiSortColumn> GetMultiSortColumns()
+void ClearMultiSort()
+Task ApplyMultiSortAsync()
+bool HasActiveMultiSort()
+bool IsMultiSortMode()
+
+// ===== ŠTATISTIKY & INFO =====
+Task<int> GetVisibleRowsCountAsync()
+Task<int> GetTotalRowsCountAsync()
+int GetTotalRowCount()
+int GetSelectedRowCount()
+int GetValidRowCount()
+int GetInvalidRowCount()
+int GetMinimumRowCount()
+int GetColumnCount()
+
+// ===== KONFIGURÁCIA =====
+void UpdateThrottlingConfig(GridThrottlingConfig newConfig)    // Aktualizuje performance throttling nastavenia
+void UpdateColorConfig(DataGridColorConfig newConfig)          // Alias pre ApplyColorConfig (konzistentnosť)
+Task<Dictionary<string, ImportResult>> GetImportHistoryAsync() // História import operácií s výsledkami
+Task<Dictionary<string, string>> GetExportHistoryAsync()       // História export operácií s info stringami
+Task ClearImportExportHistoryAsync()                           // Vymaže histórie import/export operácií
+
+// ===== COLUMN INFO API =====
+List<string> GetAllColumnNames()                               // Vráti všetky názvy stĺpcov (actual names po rename)
+List<string> GetUserColumnNames()                              // Vráti len user-defined column names (bez special columns)
+List<string> GetSpecialColumnNames()                           // Vráti len special column names (ValidationAlerts, DeleteRow, atď.)
+int GetColumnIndex(string columnName)                          // Vráti index stĺpca podľa názvu (-1 ak neexistuje)
+
+// ===== RUNTIME COLOR THEMING =====
+void ApplyColorConfig(DataGridColorConfig colorConfig)  // Aplikuje nové farby okamžite (prepíše initialization farby)
+void ResetColorsToDefaults()  // Resetuje farby na default (okrem validation errors)
+
+// ===== DEFAULT COLOR SCHEME =====
+// VALIDATION ERRORS: Červené orámovanie bunky (default)
+// SELECTION: Bledo zelený background pri označení buniek (default) 
+// COPY MODE: Bledo modrý background pri copy operácii (default)
+// BORDER/TEXT: Čierne orámovanie buniek + čierny text (default)
+// ZEBRA ROWS: Bledo šedé alternujúce riadky (default: #F9F9F9 / #FFFFFF)
+// POZNÁMKA: Všetky default farby možno zmeniť z aplikácie pomocou SetColor API
+```
+
+## 🏗️ DETAILNÁ MODULÁRNA ARCHITEKTÚRA
+
+### **📊 Core Module - DynamicTableCore**
+```csharp
+// Základ systému - Cell-based matrix s intelligent row management
+public class DynamicTableCore
+{
+    // Cell matrix management
+    private CellMatrix _cellMatrix;
+    private List<RowDefinition> _rows;
+    private List<ColumnDefinition> _columns;
+    private int _minimumRowCount;  // Definovaný z aplikácie
+    
+    // Core operations (funguje bez UI)
+    public async Task InitializeAsync(List<GridColumnDefinition> columns, int emptyRowsCount = 15)
+    {
+        _minimumRowCount = emptyRowsCount;
+        // Vytvorí minimálne množstvo riadkov + 1 prázdny na konci
+    }
+    
+    public async Task<Cell> GetCellAsync(int row, int column)  
+    public async Task SetCellValueAsync(int row, int column, object? value)
+    {
+        // Auto-expand: ak píšem do posledného prázdneho riadku → pridaj nový prázdny
+        if (row == _rows.Count - 1 && !IsRowEmpty(row))
+        {
+            await AddEmptyRowAsync();
+        }
+    }
+    
+    public async Task<Row> GetRowAsync(int rowIndex)
+    public async Task<Column> GetColumnAsync(int columnIndex)
+    
+    // Intelligent row operations
+    public async Task<bool> AreAllNonEmptyRowsValidAsync()
+    {
+        // VALIDUJE VŠETKY riadky v celom dataset, nie len zobrazené
+        var allRows = await GetAllDataRowsAsync(); // Všetky, nie len viewport
+        return await _validationModule.ValidateAllRowsAsync(allRows);
+    }
+    
+    public async Task SmartDeleteRowAsync(int rowIndex)
+    {
+        // Smart delete logic
+        if (_rows.Count > _minimumRowCount + 1)
+        {
+            // Máme viac ako minimum + 1 → zmaž celý riadok
+            await DeleteCompleteRowAsync(rowIndex);
+        }
+        else
+        {
+            // Máme minimum alebo menej → vyčisti len obsah, zachovaj štruktúru
+            await ClearRowContentAsync(rowIndex);
+        }
+    }
+    
+    public async Task PasteDataAsync(List<Dictionary<string, object?>> pasteData, int startRow, int startColumn)
+    {
+        // Automatic row expansion pre paste operations
+        int requiredRows = startRow + pasteData.Count;
+        if (requiredRows > _rows.Count - 1) // -1 pre prázdny riadok na konci
+        {
+            await ExpandRowsToCountAsync(requiredRows + 1); // +1 pre nový prázdny riadok
+        }
+        
+        // Vlož dáta
+        await InsertPasteDataAsync(pasteData, startRow, startColumn);
+    }
+    
+    // Matrix operations
+    public async Task InsertRowAsync(int index, Dictionary<string, object?> data = null)
+    public async Task DeleteRowAsync(int index) // Uses SmartDeleteRowAsync logic
+    public async Task InsertColumnAsync(int index, GridColumnDefinition columnDef)
+    public async Task DeleteColumnAsync(int index)
+    
+    // Row management helpers
+    private async Task AddEmptyRowAsync()
+    private async Task ExpandRowsToCountAsync(int targetCount)
+    private bool IsRowEmpty(int rowIndex)
+    private async Task DeleteCompleteRowAsync(int rowIndex)
+    private async Task ClearRowContentAsync(int rowIndex)
+    private async Task<List<Row>> GetAllDataRowsAsync() // Všetky riadky, nie len viewport
+}
+
+// UI Wrapper (UserControl)  
+public partial class AdvancedDataGrid : UserControl
+{
+    private DynamicTableCore _tableCore;  // Headless core
+    private ItemRepeater _cellRepeater;   // UI virtualization
+    private KeyboardShortcutManager _shortcutManager; // Keyboard handling
+    
+    // UI-specific operations
+    private async Task RenderCellsAsync()
+    private async Task UpdateUIAsync()
+    private async Task HandleKeyboardShortcutsAsync(KeyEventArgs e)
+}
+
+// Keyboard shortcuts management
+public class KeyboardShortcutManager
+{
+    public async Task<bool> HandleKeyAsync(VirtualKey key, bool isCtrlPressed, bool isShiftPressed, CellPosition currentCell)
+    {
+        return (key, isCtrlPressed, isShiftPressed) switch
+        {
+            (VirtualKey.Escape, false, false) => await CancelCellEditAsync(),
+            (VirtualKey.Enter, false, false) => await CommitCellEditAsync(stayOnCell: true),
+            (VirtualKey.Enter, false, true) => await InsertNewLineInCellAsync(),
+            (VirtualKey.Tab, false, false) => await MoveToNextCellAsync(),
+            (VirtualKey.Tab, false, true) => await MoveToPreviousCellAsync(),
+            (VirtualKey.C, true, false) => await CopySelectedCellsAsync(),
+            (VirtualKey.V, true, false) => await PasteFromClipboardAsync(),
+            (VirtualKey.X, true, false) => await CutSelectedCellsAsync(),
+            (VirtualKey.A, true, false) => await SelectAllCellsAsync(),
+            (VirtualKey.Delete, false, false) => await SmartDeleteAsync(),
+            (VirtualKey.Delete, true, false) => await ForceDeleteRowAsync(),
+            (VirtualKey.Insert, false, false) => await InsertRowAboveAsync(),
+            (VirtualKey.Home, true, false) => await MoveToFirstCellAsync(),
+            (VirtualKey.End, true, false) => await MoveToLastDataCellAsync(),
+            _ => false // Unhandled
+        };
+    }
+}
+```
+
+### **✅ Validation Module**
+```csharp
+public class ValidationModule
+{
+    // Real-time validation (single cell change)
+    public async Task<ValidationResult> ValidateCellAsync(Cell cell, IValidationConfiguration config)
+    
+    // Bulk validation (import, paste operations)
+    public async Task<BulkValidationResult> ValidateAllAsync(
+        CellMatrix matrix, 
+        IValidationConfiguration config,
+        IProgress<ValidationProgress> progress = null,
+        CancellationToken cancellationToken = default)
+    
+    // Cross-row validation
+    public async Task<ValidationResult> ValidateCrossRowRulesAsync(
+        List<Row> rows, 
+        IValidationConfiguration config)
+    
+    // Performance: Background validation queue
+    private readonly ValidationQueue _backgroundQueue;
+}
+```
+
+### **🔍 Search Module**
+```csharp
+public class SearchModule  
+{
+    public async Task<SearchResults> SearchAsync(
+        CellMatrix matrix,
+        string searchTerm,
+        SearchConfiguration config)
+    
+    // Advanced search options
+    public class SearchConfiguration
+    {
+        public List<string> TargetColumns { get; set; }  // Specific columns
+        public List<int> TargetRows { get; set; }        // Specific rows
+        public bool CaseSensitive { get; set; }
+        public bool IsRegex { get; set; }
+        public bool WholeWord { get; set; }
+        public SearchMode Mode { get; set; }             // Contains, StartsWith, EndsWith, Exact
+    }
+    
+    // Column/Row specific search
+    public async Task<SearchResults> SearchInColumnsAsync(string term, params string[] columns)
+    public async Task<SearchResults> SearchInRowsAsync(string term, params int[] rows)
+    public async Task<SearchResults> SearchInCellRangeAsync(string term, CellRange range)
+}
+```
+
+### **🎛️ Filter Module**
+```csharp
+public class FilterModule
+{
+    private readonly List<FilterRule> _activeFilters = new();
+    
+    public async Task<FilteredMatrix> ApplyFiltersAsync(
+        CellMatrix sourceMatrix, 
+        List<FilterRule> filters)
+    
+    // Dynamic filter rules
+    public class FilterRule
+    {
+        public string ColumnName { get; set; }
+        public FilterOperator Operator { get; set; }  // Equals, Contains, GreaterThan, etc.
+        public object Value { get; set; }
+        public bool CaseSensitive { get; set; }
+    }
+    
+    // Filter combinations
+    public async Task AddFilterAsync(FilterRule rule)
+    public async Task RemoveFilterAsync(string columnName)  
+    public async Task ClearAllFiltersAsync()
+    public async Task<FilteredMatrix> ApplyFilterCombinationAsync(FilterLogic logic) // AND/OR
+}
+```
+
+### **📊 Sort Module**
+```csharp
+public class SortModule
+{
+    private readonly List<SortColumn> _sortColumns = new();
+    
+    public async Task<SortedMatrix> SortAsync(
+        CellMatrix matrix,
+        List<SortColumn> sortColumns)
+    
+    // Multi-column sorting
+    public class SortColumn
+    {
+        public string ColumnName { get; set; }
+        public SortDirection Direction { get; set; }
+        public int Priority { get; set; }  // Multi-sort priority
+        public IComparer<object> CustomComparer { get; set; }  // Custom sort logic
+    }
+    
+    // Sort operations
+    public async Task AddSortColumnAsync(string columnName, SortDirection direction)
+    public async Task RemoveSortColumnAsync(string columnName)
+    public async Task ClearAllSortsAsync()
+    public async Task<SortedMatrix> ApplySortAsync()
+}
+```
+
+### **⚡ Performance Module**
+```csharp
+public class PerformanceModule
+{
+    // Memory management
+    public class MemoryManager
+    {
+        private readonly ObjectPool<Cell> _cellPool;
+        private readonly WeakReferenceCache _cache;
+        
+        public async Task OptimizeMemoryAsync()
+        public async Task<MemoryReport> GetMemoryUsageAsync()
+        public async Task ForceGarbageCollectionAsync()
+    }
+    
+    // Multi-level caching
+    public class CacheManager
+    {
+        private readonly L1MemoryCache _l1Cache;      // Hot data
+        private readonly L2CompressedCache _l2Cache;  // Compressed data  
+        private readonly L3DiskCache _l3Cache;        // Disk storage
+        
+        public async Task<T> GetAsync<T>(string key)
+        public async Task SetAsync<T>(string key, T value, TimeSpan expiry)
+    }
+    
+    // Large file optimization
+    public class LargeFileOptimizer
+    {
+        public async Task<ImportResult> StreamingImportAsync(
+            Stream dataStream, 
+            IProgress<ImportProgress> progress)
+        
+        public async Task<Stream> StreamingExportAsync(
+            CellMatrix matrix,
+            ExportFormat format)
+    }
+}
+```
+
+### **🎨 Theming Module**
+```csharp
+public class ThemingModule
+{
+    private readonly Dictionary<string, ColorScheme> _colorSchemes = new();
+    
+    // Runtime color management
+    public void SetCellColor(int row, int column, ColorType type, Color color)
+    public void SetRowColor(int row, ColorType type, Color color)  
+    public void SetColumnColor(string columnName, ColorType type, Color color)
+    public Color GetCellColor(int row, int column, ColorType type)
+    
+    // Color schemes
+    public enum ColorType
+    {
+        Background, Foreground, Border, ValidationError, 
+        ValidationWarning, Selection, Hover, Focus
+    }
+    
+    // Batch color operations
+    public void ApplyColorScheme(ColorScheme scheme)
+    public void SetZebraRowColors(Color evenColor, Color oddColor)
+    public void SetValidationColors(Color errorColor, Color warningColor)
+}
+```
+
+**Special Columns & Automatic Positioning:**
+```csharp
+// Special columns sú automaticky umiestnené na správne pozície:
+// 1. User-defined columns (v zadanom poradí)
+// 2. ValidationAlerts column (ak je povolená) - SECOND-TO-LAST position  
+// 3. DeleteRow column (ak je povolená) - LAST position
+
+// Konfigurácia columns v GridColumnDefinition (bez DisplayName):
+var columns = new List<GridColumnDefinition>
+{
+    new() { Name = "Meno", DataType = typeof(string) },        // Name = DisplayName
+    new() { Name = "Vek", DataType = typeof(int) },            // Name = DisplayName
+    
+    // CheckBox column - môže byť kdekoľvek v user-defined columns  
+    new() { Name = "Vybrané", DataType = typeof(bool), IsCheckBoxColumn = true },
+    
+    // ValidationAlerts - automaticky sa presunie na second-to-last position
+    new() { Name = "ValidationAlerts", IsValidationAlertsColumn = true },
+    
+    // DeleteRow - automaticky sa presunie na last position  
+    new() { Name = "DeleteRows", IsDeleteRowColumn = true }
+};
+
+// Výsledné poradie v DataGrid:
+// [Meno] [Vek] [Vybrané] [ValidationAlerts] [DeleteRows]
+//                        ↑second-to-last   ↑last
+```
+
+**Custom Business Validation (definovaná v aplikácii):**
+```csharp
+// IValidationConfiguration sa implementuje v aplikácii, NIE v balíku
+public class MyBusinessValidation : IValidationConfiguration  
+{
+    public ValidationRuleSet GetInternalRuleSet()
+    {
+        return new ValidationRuleSetBuilder()
+            .AddRule("Name", value => !string.IsNullOrEmpty(value?.ToString()), "Meno je povinné")
+            .AddRule("Age", value => int.TryParse(value?.ToString(), out int age) && age >= 0 && age <= 120, 
+                     "Vek musí byť medzi 0 a 120")
+            .AddCrossRowRule(data => ValidateUniqueEmails(data), "Email musí byť jedinečný")
+            .Build();
+    }
+    
+    private bool ValidateUniqueEmails(List<Dictionary<string, object?>> allData)
+    {
+        // Custom cross-row validation logic implemented by application
+        var emails = allData.Select(row => row.GetValueOrDefault("Email")?.ToString())
+                           .Where(email => !string.IsNullOrEmpty(email))
+                           .ToList();
+        return emails.Count == emails.Distinct().Count();
+    }
+}
+
+// Použitie v aplikácii:
+var validationConfig = new MyBusinessValidation();
+await dataGrid.InitializeAsync(columns, validationConfig);
+```
+
+**Models:**
+- **Cell Models**: CellPosition, CellData, CellRange
+- **Grid Models**: ColumnDefinition, ColorConfig, ThrottlingConfig
+- **Validation Models**: ValidationRule, BatchValidationResult, IValidationConfiguration (interface)
+- **Search Models**: AdvancedFilter, MultiSortColumn, SearchResults, SearchMatch
+- **Special Column Models**: CheckBoxColumn, DeleteRowColumn, ValidationAlertsColumn
+
+### **📝 2. LoggerComponent**
+
+**Namespace**: `RpaWinUiComponentsPackage.LoggerComponent`
+
+**Hlavné Features:**
+- Wrapper pre external ILogger + file management
+- Thread-safe logging s semafórmi
+- Automatic file rotation
+- Priame metódy pre log levels (Info, Debug, Warning, Error)
+- Diagnostics a health checks
+- Factory methods pre rôzne scenáre
+
+**Public API Methods (~15 metód + properties):**
+
+```csharp
+// Logging Methods
+Task Info(string message)
+Task Debug(string message)  
+Task Warning(string message)
+Task Error(string message)
+Task Error(Exception exception, string? message = null)
+Task LogAsync(string message, string logLevel = "INFO") // Legacy compatibility
+
+// Factory Methods
+static LoggerComponent FromLoggerFactory(ILoggerFactory factory, ...)
+static LoggerComponent WithoutRotation(ILogger logger, ...)
+static LoggerComponent WithRotation(ILogger logger, ...)
+
+// Diagnostics
+string GetDiagnosticInfo()
+Task<bool> TestLoggingAsync()
+
+// Properties
+string CurrentLogFile { get; }
+double CurrentFileSizeMB { get; }
+bool IsRotationEnabled { get; }
+ILogger ExternalLogger { get; }
+```
+
+**Core Classes:**
+- **LoggerComponent** - Main logger class
+- **LogFileManager** - File rotation a cleanup
+- **LoggerConfiguration** - Configuration management
+
+---
+
+## 📝 COMPREHENSIVE LOGGING SYSTEM
+
+### **🚫 Null Logger Support**
+```csharp
+// Ak nie je pripojený žiadny logger, balík funguje bez chyby
+await dataGrid.InitializeAsync(columns, logger: null);  // ✅ OK - žiadne logovanie
+
+// Interné kontroly:
+_logger?.LogInformation("Message");  // Safe call - null logger = no logging
+```
+
+### **📊 Comprehensive Error Logging**
+**Všetky chyby sú logované ak je logger pripojený:**
+
+```csharp
+// ===== INICIALIZAČNÉ CHYBY =====
+_logger?.LogError("🚨 INIT ERROR: Column '{ColumnName}' has invalid DataType", columnName);
+_logger?.LogError("🚨 INIT ERROR: ValidationConfiguration.GetInternalRuleSet() failed");
+_logger?.LogError("🚨 INIT ERROR: Service initialization failed - {ServiceName}", serviceName);
+
+// ===== UI CHYBY =====  
+_logger?.LogError(ex, "🚨 UI ERROR: Cell rendering failed - Row: {Row}, Column: {Column}", row, col);
+_logger?.LogError(ex, "🚨 UI ERROR: Event handler failed - Event: {EventName}", eventName);
+_logger?.LogError(ex, "🚨 UI ERROR: XAML element access failed - Element: {ElementName}", elementName);
+
+// ===== DATA OPERÁCIE CHYBY =====
+_logger?.LogError(ex, "🚨 DATA ERROR: Import failed - Format: {Format}, Size: {Size}KB", format, sizeKB);
+_logger?.LogError(ex, "🚨 DATA ERROR: Export failed - Row count: {RowCount}", rowCount);
+_logger?.LogError(ex, "🚨 DATA ERROR: Validation failed - Rule: {RuleName}", ruleName);
+
+// ===== PERFORMANCE CHYBY =====
+_logger?.LogError(ex, "🚨 PERF ERROR: Memory allocation failed - Requested: {SizeMB}MB", sizeMB);
+_logger?.LogError(ex, "🚨 PERF ERROR: Cache operation failed - Key: {CacheKey}", cacheKey);
+```
+
+### **📈 Operational Logging (pre debugging a audit trail)**
+```csharp
+// ===== ŠTARTOVANIE OPERÁCIÍ =====
+_logger?.LogInformation("🚀 OPERATION START: InitializeAsync - Columns: {Count}, Rules: {Rules}", 
+                       columns.Count, validationConfig?.RulesCount ?? 0);
+_logger?.LogInformation("🚀 OPERATION START: ImportFromExcelAsync - Size: {SizeKB}KB", sizeKB);
+_logger?.LogInformation("🚀 OPERATION START: SearchAsync - Term: '{Term}', Columns: {Count}", 
+                       searchTerm, targetColumns?.Count ?? 0);
+
+// ===== DÁTA CONTEXT =====
+_logger?.LogDebug("📊 DATA CONTEXT: Total rows: {TotalRows}, Valid: {ValidRows}, Invalid: {InvalidRows}",
+                 totalRows, validRows, invalidRows);
+_logger?.LogDebug("📊 DATA CONTEXT: Current filters: {FilterCount}, Sort columns: {SortCount}",
+                 filters.Count, sortColumns.Count);
+_logger?.LogDebug("📊 DATA CONTEXT: Selected cells: {SelectedCount}, Clipboard size: {ClipboardSize}",
+                 selectedCells.Count, clipboardData?.Length ?? 0);
+
+// ===== PERFORMANCE METRICS =====
+_logger?.LogDebug("⚡ PERFORMANCE: Operation '{Operation}' took {ElapsedMs}ms, Memory: {MemoryMB}MB",
+                 operationName, stopwatch.ElapsedMilliseconds, GC.GetTotalMemory(false) / 1024 / 1024);
+_logger?.LogDebug("⚡ PERFORMANCE: Cache hit rate: {HitRate:P2}, Entries: {EntryCount}",
+                 cacheHitRate, cacheEntries);
+
+// ===== USER ACTIONS =====
+_logger?.LogInformation("👤 USER ACTION: Cell edited - Row: {Row}, Column: '{Column}', Value: '{Value}'",
+                       row, columnName, newValue);
+_logger?.LogInformation("👤 USER ACTION: Sort applied - Column: '{Column}', Direction: {Direction}",
+                       columnName, sortDirection);
+_logger?.LogInformation("👤 USER ACTION: Filter added - Column: '{Column}', Filter: '{Filter}'",
+                       columnName, filterValue);
+
+// ===== OPERÁCIE DOKONČENIE =====
+_logger?.LogInformation("✅ OPERATION SUCCESS: ImportFromExcelAsync - Imported: {Rows} rows, Errors: {Errors}",
+                       importResult.ImportedRows, importResult.ErrorCount);
+_logger?.LogInformation("✅ OPERATION SUCCESS: Validation completed - Valid: {Valid}, Invalid: {Invalid}",
+                       validationResult.ValidCount, validationResult.InvalidCount);
+```
+
+### **🔍 Debug Trail Pre Problem Solving**
+```csharp
+// Ak nastane chyba, logy obsahujú kompletný kontext:
+_logger?.LogError(ex, 
+    "🚨 CRITICAL ERROR in SearchAsync\n" +
+    "📊 Context: Term='{SearchTerm}', CaseSensitive={CaseSensitive}, Regex={IsRegex}\n" +
+    "📊 Data: TotalRows={TotalRows}, FilteredRows={FilteredRows}\n" +
+    "📊 State: ActiveFilters={FilterCount}, SortColumns={SortCount}\n" +
+    "📊 Performance: ElapsedMs={ElapsedMs}, MemoryMB={MemoryMB}\n" +
+    "📊 User: LastAction='{LastAction}', SessionId='{SessionId}'",
+    searchTerm, caseSensitive, isRegex, totalRows, filteredRows,
+    activeFilters.Count, sortColumns.Count, stopwatch.ElapsedMilliseconds,
+    GC.GetTotalMemory(false) / 1024 / 1024, lastUserAction, sessionId);
+```
+
+### **⚙️ Logging Configuration v Aplikácii**
+```csharp
+// Setup v aplikácii (nie v balíku):
+var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.AddConsole()
+           .AddDebug() 
+           .AddFile("logs/app-{Date}.txt")  // Ak používa Serilog
+           .SetMinimumLevel(LogLevel.Information);
+});
+
+var logger = loggerFactory.CreateLogger<MyApplication>();
+
+// Balík loguje všetko do tohto loggera
+await dataGrid.InitializeAsync(columns, logger: logger);
+```
+
+---
+
+## 🎯 PUBLIC API DESIGN
+
+### **📋 API Design Principles**
+
+1. **Konzistentné Pomenovanie**
+   ```csharp
+   // Všetky import metódy začínajú s ImportFrom...
+   ImportFromDictionaryAsync()
+   ImportFromDataTableAsync()
+   ImportFromExcelAsync()
+   
+   // Všetky export metódy začínajú s ExportTo...
+   ExportToDataTableAsync()
+   ExportToExcelAsync()
+   ExportToCsvAsync()
+   ```
+
+2. **Async-First Approach**
+   ```csharp
+   // Všetky I/O operácie sú async
+   Task<bool> AreAllNonEmptyRowsValidAsync()
+   Task ImportFromFileAsync(string path)
+   Task<SearchResults?> SearchAsync(string term)
+   ```
+
+3. **Optional Parameters s Defaults**
+   ```csharp
+   // Rozumné defaulty pre ľahké použitie
+   Task ImportFromDictionaryAsync(
+       List<Dictionary<string, object?>> data, 
+       bool validate = true,                    // Default: validation enabled
+       Dictionary<int, bool>? checkboxStates = null)  // Optional checkbox states
+   ```
+
+4. **Type Safety**
+   ```csharp
+   // Strongly typed parameters namiesto magic strings
+   Task<ImportResult> ImportFromExcelAsync(
+       byte[] bytes,
+       bool validate = true,
+       bool continueOnErrors = false)
+   ```
+
+5. **Clean Return Types**
+   ```csharp
+   // Jasné return types s významnými informáciami
+   Task<bool> AreAllNonEmptyRowsValidAsync()           // Simple boolean
+   Task<ImportResult> ImportFromExcelAsync(...)        // Rich result object  
+   Task<SearchResults?> SearchAsync(...)               // Nullable for no results
+   ```
+
+### **🔧 API Categories**
+
+**Initialization API** (1 metóda)
+- `InitializeAsync()` - Única entry point
+
+**Data Import API** (5 metód)
+- Dictionary, DataTable, Excel, XML, File imports
+
+**Data Export API** (6 metód) 
+- DataTable, Excel, CSV, JSON, XML, File exports
+
+**Validation API** (3 metódy)
+- Validation, UI updates, batch operations
+
+**Navigation API** (12 metód)
+- Cell movement, selection, focus management
+
+**Search & Filter API** (8 metód)
+- Search, filters, history management
+
+**Data Operations API** (6 metód)
+- CRUD operations, row management
+
+**Configuration API** (4 metódy)
+- Settings, theming, feature toggles
+
+---
+
+## 📦 DEPENDENCIES & PACKAGE MANAGEMENT
+
+### **🎯 Minimálne Dependencies**
+
+```xml
+<ItemGroup>
+  <!-- WinUI3 Core - Latest Stable -->
+  <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+  
+  <!-- Logging - Iba Abstractions! -->
+  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
+  
+  <!-- Dependency Injection - Pre advanced scenarios -->
+  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
+  
+  <!-- System Dependencies -->
+  <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+  <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.8" />
+</ItemGroup>
+```
+
+**✅ VYRIEŠENÉ: LOGGING DEPENDENCIES**
+- **BALÍK**: Používa IBEN `Microsoft.Extensions.Logging.Abstractions` ✅ DOKONČENÉ
+- **BALÍK**: Custom LoggerExtensions helper methods implementované ✅ DOKONČENÉ  
+- **BALÍK**: Systematic replacement všetkých logging calls (101 locations) ✅ DOKONČENÉ
+- **DEMO APLIKÁCIA**: Môže používať plné `Microsoft.Extensions.Logging` pre testovanie ✅ READY
+- **Dôvod**: Abstractions umožňuje aplikáciám použiť ľubovoľnú logging implementáciu (Serilog, NLog, atď.)
+
+**Implementované riešenie:**
+```csharp
+// Custom extension methods v balíku (AdvancedWinUiDataGrid + LoggerComponent):
+public static void Info(this ILogger? logger, string message, params object?[] args)
+public static void Error(this ILogger? logger, string message, params object?[] args) 
+public static void Warning(this ILogger? logger, string message, params object?[] args)
+public static void Debug(this ILogger? logger, string message, params object?[] args)
+
+// Usage v balíku (101 locations updated):
+_logger?.Info("Operation started - Data: {Count}", data.Count);  // ✅ Works
+_logger?.Error(ex, "Operation failed - Context: {Context}", context);  // ✅ Works
+```
+
+**Kľúčové Rozhodnutia:**
+- **NIE Microsoft.Extensions.Logging** - iba Abstractions v balíku!
+- **Stable verzie** - nie bleeding edge  
+- **Minimálny footprint** - iba potrebné packages
+- **.NET 8 optimalizované** verzie (9.0.x packages sú OK pre .NET 8)
+
+### **🏗️ Package Configuration**
+
+```xml
+<PropertyGroup>
+  <!-- Framework -->
+  <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+  <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+  <UseWinUI>true</UseWinUI>
+  
+  <!-- Package Properties -->
+  <PackageId>RpaWinUiComponentsPackage</PackageId>
+  <Version>2.0.0</Version>
+  <Authors>RPA Team</Authors>
+  <Description>Professional WinUI3 Components Package: Multi-component library for enterprise applications</Description>
+  <PackageTags>WinUI3;Components;DataGrid;Logger;Enterprise;NET8</PackageTags>
+  
+  <!-- Build Settings -->
+  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  <IncludeSymbols>true</IncludeSymbols>
+  <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+</PropertyGroup>
+```
+
+---
+
+## 🧪 TESTOVANIE & DEMO APLIKÁCIA
+
+### **📱 Demo App Architecture**
+
+```
+RpaWinUiComponents.Demo/
+├── 📄 RpaWinUiComponents.Demo.csproj     # WinUI3 app project
+├── 📄 App.xaml/.cs                       # Application entry point
+├── 📄 MainWindow.xaml/.cs                # Main testing interface
+├── 📄 Package.appxmanifest               # WinUI3 manifest
+└── 📁 Assets/                            # App assets (icons, etc.)
+```
+
+**Demo App Project File:**
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWinUI>true</UseWinUI>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CRITICAL: Package reference, NOT project reference! -->
+    <PackageReference Include="RpaWinUiComponentsPackage" Version="2.0.0" />
+    
+    <!-- External logging implementation for testing -->
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+  </ItemGroup>
+</Project>
+```
+
+### **🎯 Demo App Features**
+
+**Testovanie AdvancedWinUiDataGrid:**
+- Initialization testing s rôznymi konfiguráciami
+- Data import/export testing (všetky formáty)
+- Validation testing s business rules
+- Navigation testing (keyboard, mouse)
+- Search/Filter testing
+- Performance testing s large datasets
+- UI interaction testing
+
+**Testovanie LoggerComponent:**
+- Logging level testing
+- File rotation testing  
+- External logger integration
+- Performance testing
+- Error handling testing
+
+**UI Layout:**
+```xml
+<Grid>
+  <Grid.RowDefinitions>
+    <RowDefinition Height="Auto"/>      <!-- Controls -->
+    <RowDefinition Height="*"/>         <!-- DataGrid -->
+    <RowDefinition Height="200"/>       <!-- Logs -->
+  </Grid.RowDefinitions>
+  
+  <!-- Test Controls -->
+  <StackPanel Grid.Row="0" Orientation="Horizontal">
+    <!-- 50+ test buttons organized by category -->
+  </StackPanel>
+  
+  <!-- Main DataGrid -->
+  <advanced:AdvancedDataGrid Grid.Row="1" x:Name="TestDataGrid"/>
+  
+  <!-- Live Log Output -->
+  <ScrollViewer Grid.Row="2">
+    <TextBlock x:Name="LogOutput"/>
+  </ScrollViewer>
+</Grid>
+```
+
+---
+
+## 🚀 BUILD & DEPLOYMENT
+
+### **🏗️ Development Build Process**
+
+```bash
+# 1. Clean build
+dotnet clean RpaWinUiComponentsPackage.sln
+dotnet restore RpaWinUiComponentsPackage.sln
+
+# 2. Build package
+dotnet build RpaWinUiComponentsPackage/RpaWinUiComponentsPackage.csproj
+
+# 3. Create NuGet package
+dotnet pack RpaWinUiComponentsPackage/RpaWinUiComponentsPackage.csproj --configuration Release
+
+# 4. Build demo app with package reference
+dotnet build RpaWinUiComponents.Demo/RpaWinUiComponents.Demo.csproj
+
+# 5. Run demo app
+dotnet run --project RpaWinUiComponents.Demo/RpaWinUiComponents.Demo.csproj
+```
+
+### **📦 Package Publishing**
+
+```bash
+# Local testing
+dotnet nuget push bin/Release/RpaWinUiComponentsPackage.2.0.0.nupkg --source "LocalFeed"
+
+# Production publishing  
+dotnet nuget push bin/Release/RpaWinUiComponentsPackage.2.0.0.nupkg --source "https://api.nuget.org/v3/index.json" --api-key YOUR_API_KEY
+```
+
+### **🔧 CI/CD Pipeline**
+
+```yaml
+# .github/workflows/build.yml
+name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Restore packages
+      run: dotnet restore
+      
+    - name: Build package
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Create NuGet package
+      run: dotnet pack --configuration Release --no-build
+      
+    - name: Test with demo app
+      run: dotnet build RpaWinUiComponents.Demo --configuration Release
+```
+
+---
+
+## 🚧 AKTUÁLNY STAV IMPLEMENTÁCIE
+
+### **📅 Implementované Komponenty (August 2025)**
+
+#### **✅ LoggerComponent - DOKONČENÝ (100%)**
+**Stav**: Plne funkčný, testovaný, production-ready
+
+**Implementované features:**
+- ✅ **Thread-safe logging** s Channel-based architecture
+- ✅ **Automatic file rotation** (daily + size-based chunking)
+- ✅ **Extension methods** pre INFO, ERROR, DEBUG, WARNING levels
+- ✅ **External logger integration** (Microsoft.Extensions.Logging.Abstractions)
+- ✅ **Factory methods** (FromLoggerFactory, WithRotation, WithoutRotation)
+- ✅ **Diagnostics API** (GetDiagnosticInfo, TestLoggingAsync)
+- ✅ **Memory-safe operations** s proper disposal pattern
+- ✅ **Zero message loss** s periodic flush (100ms timer)
+- ✅ **Independent architecture** - plne oddelený od ostatných komponentov
+
+**API Methods implementované:**
+```csharp
+// Logging Methods ✅
+Task Info(string message)
+Task Debug(string message)  
+Task Warning(string message)
+Task Error(string message)
+Task Error(Exception exception, string? message = null)
+
+// Factory Methods ✅
+static LoggerComponent FromLoggerFactory(ILoggerFactory factory, ...)
+static LoggerComponent WithoutRotation(ILogger logger, ...)
+static LoggerComponent WithRotation(ILogger logger, ...)
+
+// Diagnostics ✅
+string GetDiagnosticInfo()
+Task<bool> TestLoggingAsync()
+
+// Properties ✅
+string CurrentLogFile { get; }
+double CurrentFileSizeMB { get; }
+bool IsRotationEnabled { get; }
+ILogger ExternalLogger { get; }
+```
+
+**Testovanie:**
+- ✅ Demo aplikácia funkčná
+- ✅ Package reference testované
+- ✅ Thread safety testované
+- ✅ File rotation testované
+- ✅ Memory leak testované
+
+#### **🔧 AdvancedWinUiDataGrid - V PROGRESE (30%)**
+**Stav**: Základná architektúra implementovaná, logging integrované, pokračuje sa s modulmi
+
+**Implementované features:**
+- ✅ **Partial class architecture** - správne rozdelenie od začiatku:
+  - ✅ `AdvancedDataGrid.cs` - main UserControl s properties
+  - ✅ `AdvancedDataGrid.Core.cs` - UI infrastructure a event handlers
+  - ✅ `AdvancedDataGrid.PublicAPI.cs` - všetky public API metódy
+- ✅ **DynamicTableCore** - headless core implementovaný s hybrid model:
+  - ✅ Row-based storage pre fast bulk operations
+  - ✅ Cell-based UI state tracking
+  - ✅ Intelligent row management s auto-expand
+  - ✅ Smart delete logic (content vs whole row)
+  - ✅ Validation integration points
+- ✅ **Comprehensive logging system**:
+  - ✅ Helper extension methods pre oba komponenty
+  - ✅ Systematic logging replacement (101 locations updated)
+  - ✅ ERROR, INFO, WARNING levels pre release mode
+  - ✅ Context-rich error logging s operation details
+  - ✅ Null logger support (funguje bez crash)
+- ✅ **Configuration & Models**:
+  - ✅ DataGridColorConfig s Microsoft.UI.Colors support
+  - ✅ GridColumnDefinition s validation
+  - ✅ GridThrottlingConfig pre performance
+  - ✅ Validation models (IValidationConfiguration, ValidationResult)
+- ✅ **Build system fixes**:
+  - ✅ Package builds successfully (RpaWinUiComponentsPackage.dll)
+  - ✅ NuGet package creation works
+  - ✅ Using statements pre LoggerExtensions pridané
+  - ✅ Namespace issues resolved
+
+**Public API Methods implementované (čiastočne):**
+```csharp
+// Initialization ✅
+Task InitializeAsync(columns, validationConfig, throttlingConfig, ...)
+
+// Data Import ✅ (basic structure)
+Task ImportFromDictionaryAsync(data, checkboxStates, startRow, ...)
+Task ImportFromDataTableAsync(dataTable, checkboxStates, ...)
+
+// Data Export ✅ (basic structure)  
+Task<List<Dictionary<string, object?>>> ExportToDictionaryAsync(...)
+Task<DataTable> ExportToDataTableAsync(...)
+Task<List<Dictionary<string, object?>>> ExportFilteredToDictionaryAsync(...)
+Task<DataTable> ExportFilteredToDataTableAsync(...)
+
+// Data Management ✅ (basic structure)
+Task ClearAllDataAsync()
+Task SetMinimumRowCountAsync(int minRowCount)
+void DeleteSelectedRows()
+void SmartDeleteRowAsync(int rowIndex)  // Implementované v DynamicTableCore
+
+// Intelligent Row Management ✅ (implementované)
+Task PasteDataAsync(data, startRow, startColumn) // S auto-expand
+bool IsRowEmpty(int rowIndex)
+int GetMinimumRowCount()
+int GetActualRowCount()  
+Task<int> GetLastDataRowAsync()
+Task CompactRowsAsync()
+
+// UI Update API ✅ (basic structure)
+Task RefreshUIAsync()
+Task UpdateValidationUIAsync() 
+Task UpdateRowUIAsync(int rowIndex)
+Task UpdateCellUIAsync(int row, int column)
+void InvalidateLayout()
+
+// Configuration ✅ (implementované)
+void UpdateThrottlingConfig(GridThrottlingConfig newConfig)
+void UpdateColorConfig(DataGridColorConfig newConfig)
+void ApplyColorConfig(DataGridColorConfig colorConfig)
+void ResetColorsToDefaults()
+
+// Core Data Operations ✅ (v DynamicTableCore)
+Task<object?> GetCellValueAsync(int row, int column)
+Task SetCellValueAsync(int row, int column, object? value) // S intelligent row management
+Task<Dictionary<string, object?>> GetRowDataAsync(int rowIndex)
+Task SetRowDataAsync(int rowIndex, Dictionary<string, object?> data)
+```
+
+**Aktuálne limitácie:**
+- 🔧 **UI rendering** - základná štruktúra, ale chýba ItemsRepeater implementation
+- 🔧 **Validation module** - interface ready, ale business logic implementation chýba
+- 🔧 **Search/Filter/Sort** - API definované, ale core implementation chýba
+- 🔧 **Keyboard shortcuts** - infrastructure ready, ale shortcut handling chýba
+- 🔧 **Special columns** - column positioning logic implementovaná, ale UI rendering chýba
+- 🔧 **Duplicate column names** - potrebuje safe handling system
+- 🔧 **Unlimited row height** - auto-height system pre content overflow
+
+**Upcoming implementation priorities:**
+1. **UI virtualization** - ItemsRepeater-based cell rendering
+2. **Validation Module** - complete business rules implementation
+3. **Search Module** - advanced search s regex support
+4. **Import/Export** - complete format support (Excel, CSV, JSON)
+5. **Keyboard shortcuts** - complete shortcut system
+
+#### **📦 Package Infrastructure - DOKONČENÁ (100%)**
+**Stav**: Production-ready package infrastructure
+
+**Implementované features:**
+- ✅ **Correct dependencies** - iba Microsoft.Extensions.Logging.Abstractions
+- ✅ **Package building** - NuGet package generation works
+- ✅ **Project structure** - modulárna architektúra s independent components
+- ✅ **Build pipeline** - main package builds successfully
+- ✅ **Version management** - 2.0.0 s proper versioning
+- ✅ **Symbol packages** - debugging support s .snupkg
+
+**Package reference ready:**
+```xml
+<!-- Demo aplikácia môže používať package reference -->
+<PackageReference Include="RpaWinUiComponentsPackage" Version="2.0.0" />
+```
+
+### **📊 Implementation Progress Metrics**
+
+| **Komponent** | **Stav** | **API Coverage** | **Core Logic** | **UI Implementation** | **Testing** |
+|---------------|----------|------------------|----------------|----------------------|-------------|
+| **LoggerComponent** | ✅ Dokončený | 100% (15/15) | ✅ 100% | ✅ N/A | ✅ 100% |
+| **AdvancedWinUiDataGrid** | 🔧 V progrese | 40% (25/65) | 🔧 60% | 🔧 20% | 🔧 30% |
+| **Package Infrastructure** | ✅ Dokončená | N/A | ✅ 100% | N/A | ✅ 100% |
+
+**Overall Progress: ~45% dokončené**
+
+### **🎯 Najbližšie Priority (Next Sprint)**
+
+#### **1. UI Virtualization Implementation (3-5 dní)**
+```csharp
+// Implementovať ItemsRepeater-based rendering:
+private async Task RenderAllCellsAsync()  // Currently TODO
+private async Task UpdateSpecificCellUIAsync(int row, int column)  // Currently TODO  
+private async Task GetUIDataSourceAsync()  // Currently TODO
+```
+
+#### **2. Validation Module Implementation (3-5 dní)**  
+```csharp
+// Dokončiť validation business logic:
+public async Task<BatchValidationResult?> ValidateAllRowsBatchAsync(...)  // Core ready, business logic needed
+public async Task<bool> AreAllNonEmptyRowsValidAsync()  // Core ready, validation rules needed
+```
+
+#### **3. Search Module Implementation (2-3 dni)**
+```csharp
+// Implementovať search functionality:
+Task<SearchResults?> SearchAsync(string searchTerm, ...)  // API defined, core implementation needed
+```
+
+### **🔧 KRITICKÉ IMPLEMENTAČNÉ DETAILY**
+
+#### **📋 Duplicate Column Names Handling**
+
+**Problém**: Používateľ môže zadať duplicitné názvy stĺpcov (napr. "Meno", "Meno", "Priezvisko")
+
+**Tvoje riešenie**: Automatic renaming → "Meno_1", "Meno_2", "Priezvisko"
+
+**⚠️ KRITICKÝ PROBLÉM**: Special columns môžu dostať premenenе názvy, čo rozbije kód:
+
+```csharp
+// PROBLÉMOVÉ SCENÁRE:
+var columns = new List<GridColumnDefinition>
+{
+    new() { Name = "ValidationAlerts", DisplayName = "Moje Alerts" },        // User column
+    new() { Name = "ValidationAlerts", IsValidationAlertsColumn = true },   // Special column
+    // Výsledok: "ValidationAlerts_1" (user), "ValidationAlerts_2" (special)
+    // ❌ KÓD SA ROZBIJE - hľadá "ValidationAlerts", ale existuje "ValidationAlerts_2"!
+};
+```
+
+**✅ ALTERNATÍVNE RIEŠENIE - Smart Flag-Based System (BEZ ID)**:
+
+**Riešenie 1: Reserved Name Protection**
+- **Special columns** majú vždy priority pri naming
+- **User columns** s konfliktmi sa automaticky premenujú
+- **Kód hľadá special columns cez FLAGS, nie názvy**
+
+**Riešenie 2: Context-Aware Renaming** 
+- **Intelligent rename strategy** - special columns dostanú "stable" prípony
+- **User columns** dostanú numerické prípony
+- **Business logika používa pattern matching**
+
+### **🎯 ODPORÚČANÉ RIEŠENIE - Reserved Name Protection:**
+
+```csharp
+public class SmartColumnNameResolver
+{
+    private readonly HashSet<string> _reservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ValidationAlerts", "DeleteRow", "DeleteRows"
+    };
+    
+    /// <summary>
+    /// Smart rename strategy - special columns majú prioritu
+    /// </summary>
+    public List<GridColumnDefinition> ResolveColumnNames(List<GridColumnDefinition> inputColumns)
+    {
+        var processedColumns = new List<GridColumnDefinition>();
+        var nameCounter = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        
+        // PHASE 1: Process special columns FIRST - dostanú svoje preferované názvy
+        var specialColumns = inputColumns.Where(c => c.IsSpecialColumn).ToList();
+        foreach (var column in specialColumns)
+        {
+            column.Name = GetPreferredSpecialColumnName(column);
+            nameCounter[column.Name] = 1;
+            processedColumns.Add(column);
+        }
+        
+        // PHASE 2: Process user columns - rename conflicts
+        var userColumns = inputColumns.Where(c => !c.IsSpecialColumn).ToList();
+        foreach (var column in userColumns)
+        {
+            if (nameCounter.ContainsKey(column.Name))
+            {
+                // Conflict s existing column
+                nameCounter[column.Name]++;
+                column.Name = $"{column.Name}_{nameCounter[column.Name]}";
+            }
+            else
+            {
+                nameCounter[column.Name] = 1;
+            }
+            
+            processedColumns.Add(column);
+        }
+        
+        return processedColumns;
+    }
+    
+    /// <summary>
+    /// Special columns dostanú svoje preferované názvy
+    /// </summary>
+    private string GetPreferredSpecialColumnName(GridColumnDefinition column)
+    {
+        if (column.IsValidationAlertsColumn)
+            return "ValidationAlerts";
+        if (column.IsDeleteRowColumn) 
+            return "DeleteRow";
+        if (column.IsCheckBoxColumn)
+            return column.Name.IsNullOrEmpty() ? "Selected" : column.Name;
+            
+        return column.Name;
+    }
+}
+
+/// <summary>
+/// Business logika používa FLAG-based lookup
+/// </summary>
+public class SafeColumnAccess
+{
+    /// <summary>
+    /// Nájde ValidationAlerts column cez FLAG - názov je irelevantný
+    /// </summary>
+    public GridColumnDefinition? GetValidationAlertsColumn()
+    {
+        return _columns.FirstOrDefault(c => c.IsValidationAlertsColumn);
+        // ✅ Vždy nájde, bez ohľadu na actual name!
+    }
+    
+    /// <summary>
+    /// Safe column lookup s fallback pattern matching
+    /// </summary>
+    public GridColumnDefinition? FindColumn(string searchName)
+    {
+        // 1. Exact match
+        var exactMatch = _columns.FirstOrDefault(c => 
+            c.Name.Equals(searchName, StringComparison.OrdinalIgnoreCase));
+        if (exactMatch != null) return exactMatch;
+        
+        // 2. Pattern matching pre renamed columns
+        var patternMatch = _columns.FirstOrDefault(c => 
+            c.Name.StartsWith(searchName + "_", StringComparison.OrdinalIgnoreCase));
+        if (patternMatch != null) return patternMatch;
+        
+        // 3. Special column fallback
+        if (searchName.Equals("ValidationAlerts", StringComparison.OrdinalIgnoreCase))
+            return GetValidationAlertsColumn();
+        if (searchName.Equals("DeleteRow", StringComparison.OrdinalIgnoreCase))
+            return _columns.FirstOrDefault(c => c.IsDeleteRowColumn);
+            
+        return null;
+    }
+    
+    /// <summary>
+    /// Public API - vráti všetky názvy stĺpcov (actual names)
+    /// </summary>
+    public List<string> GetAllColumnNames()
+    {
+        return _columns.Select(c => c.Name).ToList();
+    }
+    
+    /// <summary>
+    /// Vráti len user-defined column names
+    /// </summary>
+    public List<string> GetUserColumnNames()
+    {
+        return _columns.Where(c => !c.IsSpecialColumn)
+                      .Select(c => c.Name)
+                      .ToList();
+    }
+    
+    /// <summary>
+    /// Vráti len special column names
+    /// </summary>
+    public List<string> GetSpecialColumnNames()
+    {
+        return _columns.Where(c => c.IsSpecialColumn)
+                      .Select(c => c.Name)
+                      .ToList();
+    }
+}
+```
+
+### **🔍 PRÍKLAD FUNGOVANIA:**
+
+```csharp
+// INPUT:
+var columns = new List<GridColumnDefinition>
+{
+    new() { Name = "ValidationAlerts" },                        // User column
+    new() { Name = "ValidationAlerts", IsValidationAlertsColumn = true }, // Special
+    new() { Name = "Meno" },                                   // User column
+    new() { Name = "Meno" },                                   // User column - duplicate
+};
+
+// OUTPUT po SmartColumnNameResolver:
+// 1. "ValidationAlerts" - special column (priority)
+// 2. "ValidationAlerts_2" - user column (renamed)  
+// 3. "Meno" - first user column
+// 4. "Meno_2" - duplicate user column
+
+// ✅ BUSINESS LOGIKA FUNGUJE:
+var validationCol = GetValidationAlertsColumn(); // Nájde cez IsValidationAlertsColumn flag
+// validationCol.Name = "ValidationAlerts" - má svoj preferovaný názov!
+```
+
+#### **📐 Unlimited Row Height System**
+
+**Požiadavka**: Všetky riadky majú jednotnú výšku, ale ak text presahuje → výška sa automaticky prispôsobí
+
+**Implementácia**:
+- **Base row height**: 32px default
+- **Auto-height calculation**: measure actual content
+- **NO LIMITS**: výška môže byť neobmedzená
+- **Unified per table**: všetky riadky majú rovnakú výšku (najvyšší obsah určuje výšku všetkých)
+
+```csharp
+// Automatic height calculation:
+public async Task<double> CalculateRequiredRowHeightAsync()
+{
+    double maxHeight = baseRowHeight;
+    
+    // Check ALL rows, ALL columns
+    foreach (var row in allRows)
+    {
+        foreach (var column in allColumns) 
+        {
+            var contentHeight = await MeasureContentAsync(row, column);
+            maxHeight = Math.Max(maxHeight, contentHeight);
+        }
+    }
+    
+    return maxHeight; // Apply to ALL rows (unified height)
+}
+```
+
+---
+
+## 📋 IMPLEMENTAČNÝ PLÁN
+
+### **🎯 Phase 1: Project Setup ✅ DOKONČENÉ**
+
+**1.1 Repository Setup**
+- [x] ✅ Vytvoriť nový repository
+- [x] ✅ Setup .gitignore pre .NET + WinUI3
+- [x] ✅ Vytvoriť základnú README a CHANGELOG
+- [ ] Setup basic CI/CD pipeline
+
+**1.2 Project Structure**
+- [x] ✅ Vytvoriť main package project (.csproj)
+- [x] ✅ Vytvoriť demo application project  
+- [x] ✅ Vytvoriť component folder structure
+- [x] ✅ Setup Directory.Build.props
+
+**1.3 Dependencies**
+- [x] ✅ Pridať WinUI3 dependencies
+- [x] ✅ Pridať Microsoft.Extensions.Logging.Abstractions
+- [x] ✅ Konfigurovať package properties
+
+### **🎯 Phase 2: LoggerComponent ✅ DOKONČENÉ**
+
+**2.1 Core Implementation**
+- [x] ✅ Vytvoriť LoggerComponent class
+- [x] ✅ Implementovať priame log metódy (Info, Debug, Warning, Error)
+- [x] ✅ Implementovať thread-safe logging s Channel architecture
+
+**2.2 File Management**
+- [x] ✅ Vytvoriť LogFileManager class
+- [x] ✅ Implementovať file rotation
+- [x] ✅ Implementovať cleanup functionality
+
+**2.3 Configuration**
+- [x] ✅ Vytvoriť LoggerConfiguration class
+- [x] ✅ Implementovať validation
+- [x] ✅ Implementovať factory methods
+
+**2.4 Testing**
+- [x] ✅ Pridať LoggerComponent do demo app
+- [x] ✅ Testovať všetky log levels
+- [x] ✅ Testovať file rotation
+- [x] ✅ Performance testing
+
+### **🎯 Phase 3: AdvancedWinUiDataGrid Foundation 🔧 ČIASTOČNE DOKONČENÉ**
+
+**3.1 Core Module - DynamicTableCore**
+- [x] ✅ Vytvoriť DynamicTableCore class (headless, bez UI)
+- [x] ✅ Implementovať DataRow class s hybrid model (row-based storage + cell UI state)
+- [x] ✅ Implementovať GridColumnDefinition class (column metadata)  
+- [x] ✅ Implementovať core data operations (GetCell, SetCell, GetRow, SetRow)
+- [x] ✅ Implementovať matrix management (row/column indexing)
+- [ ] 🔧 ItemRepeater-based virtualization setup (UI rendering missing)
+
+**3.2 UI Wrapper**
+- [x] ✅ Vytvoriť AdvancedDataGrid UserControl (wrapper okolo DynamicTableCore)
+- [x] ✅ Implementovať partial class structure od začiatku:
+  - [x] ✅ AdvancedDataGrid.cs (main UserControl s properties)
+  - [x] ✅ AdvancedDataGrid.Core.cs (UI infrastructure)
+  - [x] ✅ AdvancedDataGrid.PublicAPI.cs (all public methods s complete signatures)
+  - [ ] 🔧 AdvancedDataGrid.Services.cs (module initialization) - basic structure
+  - [ ] 🔧 AdvancedDataGrid.Events.cs (UI event handling) - basic structure
+
+**3.3 Core Models & Architecture**
+- [x] ✅ Configuration models (GridColumnDefinition, DataGridColorConfig, GridThrottlingConfig)
+- [x] ✅ Validation models (IValidationConfiguration, ValidationResult, BatchValidationResult) 
+- [x] ✅ Progress models (ValidationProgress, ExportProgress)
+- [ ] 🔧 Module interfaces (ISearchModule, IFilterModule) - partial implementation
+
+**3.4 Intelligent Row Management**
+- [x] ✅ Implementovať minimálny počet riadkov logic
+- [x] ✅ Auto-expand functionality (vždy +1 prázdny riadok na konci)
+- [x] ✅ Smart delete logic (content vs. whole row based on count)
+- [x] ✅ Paste auto-expansion (automatic row creation for paste data)
+- [x] ✅ Row state tracking (empty vs. data rows)
+
+**3.5 Keyboard Shortcuts System**
+- [ ] 🔧 KeyboardShortcutManager class (infrastructure ready)
+- [ ] 🔧 Edit mode shortcuts (ESC, Enter, Shift+Enter, Tab)
+- [ ] 🔧 Navigation shortcuts (arrows, Tab, Shift+Tab, Ctrl+Home/End)
+- [ ] 🔧 Copy/Paste/Cut shortcuts (Ctrl+C/V/X)
+- [ ] 🔧 Selection shortcuts (Ctrl+A, Shift+Click, Ctrl+Click)
+- [ ] 🔧 Row operation shortcuts (Delete, Ctrl+Delete, Insert)
+
+**3.6 Basic UI Infrastructure**
+- [ ] 🔧 ItemsRepeater-based rendering (structure prepared)
+- [ ] 🔧 Cell template system
+- [ ] 🔧 Column header system
+- [ ] 🔧 Virtualization implementation
+
+**3.7 Logging Integration ✅ DOKONČENÉ**
+- [x] ✅ LoggerExtensions helper methods pre AdvancedWinUiDataGrid
+- [x] ✅ Comprehensive logging v DynamicTableCore (101 logging locations)
+- [x] ✅ Context-rich error logging s operation details
+- [x] ✅ Null logger support (funguje bez crash)
+
+**3.8 Critical Infrastructure Features 🔧 POTREBNÉ**
+- [ ] 🔧 Duplicate column names safe handling system
+- [ ] 🔧 Unlimited row height system s content overflow handling
+- [ ] 🔧 Flag-based special column identification (nie name-based)
+
+### **🎯 Phase 4: Modulárne Features Implementation (4 týždne)**
+
+**4.1 Validation Module**
+- [ ] Implementovať ValidationModule class
+- [ ] Real-time validation (single cell changes)
+- [ ] Bulk validation (paste/import operations)
+- [ ] IValidationConfiguration interface (pre aplikácie)
+- [ ] ValidationRuleSetBuilder s fluent API
+- [ ] Cross-row validation rules
+- [ ] ValidationQueue pre background processing
+- [ ] Performance-optimized validation s caching
+
+**4.2 Performance Module**  
+- [ ] Implementovať PerformanceModule class
+- [ ] MemoryManager s ObjectPool<Cell>
+- [ ] Multi-level CacheManager (L1/L2/L3)
+- [ ] WeakReferenceCache pre memory optimization
+- [ ] LargeFileOptimizer pre streaming operations
+- [ ] Background processing s cancellation tokens
+- [ ] Memory monitoring a garbage collection
+
+**4.3 Import/Export Module**
+- [ ] Import API implementation (všetky 6 formátov):
+  - [ ] ImportFromDictionaryAsync s checkbox states
+  - [ ] ImportFromDataTableAsync s validation
+  - [ ] ImportFromExcelAsync s streaming
+  - [ ] ImportFromFileAsync s auto-format detection
+  - [ ] ImportFromXmlAsync s schema validation
+  - [ ] ImportFromCsvAsync s header detection
+- [ ] Export API implementation (všetky 6 formátov):
+  - [ ] ExportToDataTableAsync
+  - [ ] ExportToExcelAsync s formatting
+  - [ ] ExportToCsvAsync s custom delimiters  
+  - [ ] ExportToJsonAsync s pretty printing
+  - [ ] ExportToXmlString s schemas
+  - [ ] ExportToFileAsync s batch operations
+- [ ] Streaming support pre large files
+- [ ] Import/Export history tracking
+
+### **🎯 Phase 5: Advanced Modules (3 týždne)**
+
+**5.1 Search Module**
+- [ ] Implementovať SearchModule class
+- [ ] Advanced search (regex, whole word, case sensitive)
+- [ ] SearchConfiguration s target columns/rows
+- [ ] SearchInColumnsAsync / SearchInRowsAsync
+- [ ] SearchInCellRangeAsync pre specific ranges
+- [ ] Search history management (max 100 items)
+- [ ] Real-time search s debouncing
+- [ ] Performance optimization s indexing
+
+**5.2 Filter Module**
+- [ ] Implementovať FilterModule class  
+- [ ] FilterRule s FilterOperator system
+- [ ] Dynamic filter combinations (AND/OR logic)
+- [ ] Column-specific filtering
+- [ ] Filter persistence
+- [ ] FilteredMatrix results
+- [ ] Real-time filter application
+
+**5.3 Sort Module**
+- [ ] Implementovať SortModule class
+- [ ] Multi-column sorting s priority
+- [ ] SortColumn s custom comparers
+- [ ] Visual sort indicators
+- [ ] Sort persistence
+- [ ] SortedMatrix results
+- [ ] Performance-optimized sorting
+
+**5.4 Theming Module**
+- [ ] Implementovať ThemingModule class
+- [ ] Runtime color management (SetCellColor, SetRowColor, SetColumnColor)
+- [ ] ColorType enum (Background, Foreground, Border, etc.)
+- [ ] ColorScheme system
+- [ ] Zebra row coloring
+- [ ] Validation error coloring
+- [ ] Selection highlight coloring
+- [ ] Color persistence
+
+**5.5 Navigation Module**
+- [ ] Cell navigation (arrows, tab, shift+tab)
+- [ ] Extended selection s Ctrl+click
+- [ ] Range selection s Shift+click
+- [ ] Mouse drag selection
+- [ ] Focus management s visual indicators
+- [ ] Keyboard shortcuts (Copy: Ctrl+C, Paste: Ctrl+V, atď.)
+- [ ] Navigation callbacks a events
+
+**5.6 Special Columns System**
+- [ ] CheckBox columns (kdekoľvek v user columns)
+- [ ] ValidationAlerts column (automatic second-to-last position)
+- [ ] DeleteRow column (automatic last position)
+- [ ] Automatic column reordering algorithm
+- [ ] Special column event handling
+- [ ] Custom column templates
+
+### **🎯 Phase 6: Testing & Polish (1 týždeň)**
+
+**6.1 Demo Application**
+- [ ] Comprehensive test scenarios (UI mode)
+- [ ] All public API testing
+- [ ] Module integration testing
+- [ ] Performance benchmarks
+- [ ] Error handling testing
+- [ ] Memory leak testing
+
+**6.2 Documentation**
+- [ ] Complete API documentation
+- [ ] Module usage examples
+- [ ] Best practices guide
+- [ ] Performance tuning guide
+
+### **🎯 Phase 7: Headless API & Script Integration (2 týždne)**
+
+**7.1 Headless Script API**
+- [ ] DynamicTableCore standalone functionality
+- [ ] Script-friendly API without UI dependencies
+- [ ] Headless validation, search, filter, sort modules
+- [ ] Console application examples
+- [ ] PowerShell module integration
+
+**7.2 Package Publishing & Documentation**
+- [ ] Headless usage documentation
+- [ ] Script examples a code samples
+- [ ] Final testing s package reference (UI + headless)
+- [ ] Version tagging
+- [ ] NuGet publishing
+- [ ] Release notes s dual usage modes
+
+### **📊 Timeline Summary - MODULÁRNA ARCHITEKTÚRA**
+- **Total**: ~14-16 týždňov (3.5-4 mesiace) - KOMPLETNÁ MODULÁRNA FUNKCIONALITA
+- **Phase 1-2**: Foundation & LoggerComponent ✅ **DOKONČENÉ** (2 týždne) 
+- **Phase 3**: DynamicTableCore & UI Infrastructure 🔧 **ČIASTOČNE** (70% dokončené)
+- **Phase 4**: Core Modules - Validation, Performance, Import/Export 🔄 **AKTUÁLNE** (4 týždne)
+- **Phase 5**: Advanced Modules - Search, Filter, Sort, Theming, Navigation, Special Columns ⏳ **PENDING** (3 týždne)
+- **Phase 6**: Testing, Polish & Documentation ⏳ **PENDING** (1 týždeň)
+- **Phase 7**: Headless API & Script Integration ⏳ **PENDING** (2 týždne)
+
+**Aktuálny Progress: ~45% dokončené, LoggerComponent production-ready**
+
+**Poznámka**: 
+- **Timeline reflektuje MODULÁRNU architektúru** s perfektnou separation of concerns
+- **Dual usage modes** - UI aplikácie + headless scripting
+- **Perfect memory management** a performance optimization
+- **Identická funkcionalita** ako aktuálny projekt, ale lepšie organizovaná
+
+---
+
+## 📚 LESSONS LEARNED Z AKTUÁLNEHO PROJEKTU
+
+### **❌ Problémy Aktuálneho Projektu**
+
+**1. God-Level Files**
+- Súbory s 8000+ riadkami kódu  
+- Nemožná maintainability
+- Merge conflicts
+- Ťažké code reviews
+
+**2. Nepoužité Performance Services**
+- 2800+ riadkov kódu implementovaných ale neintegrovaných
+- 5 sophisticated services (Compression, LazyLoading, atď.) nespojené s UI
+- Placehodler TODO implementácie v public API
+
+**3. Validation Dataset Scope Issues**
+- Validácia nefunguje pre celý dataset
+- Scope problem s visible vs. total data
+
+**4. Project Reference vs Package Reference**
+- Development s project reference
+- Problémy pri přechode na package reference
+- Netestovanie finálneho package stavu
+
+### **✅ Čo Zachovať z Aktuálneho Projektu**
+
+**1. Excellent API Design**
+- 65+ dobre navrhnutých public metód
+- Type-safe operations
+- Konzistentné pomenovanie (ImportFrom..., ExportTo...)
+- Async-first approach
+
+**2. Service-Oriented Architecture**  
+- Dobre oddelené services (Data, Validation, Export, Search, atď.)
+- Interface-based design
+- Dependency injection ready
+
+**3. Comprehensive Feature Set**
+- Import/Export v 6+ formátoch
+- Advanced validation s business rules
+- Search/Filter/Sort functionality  
+- Navigation a selection
+- Performance optimizations
+
+**4. Professional Logging**
+- Thread-safe LoggerComponent
+- File rotation a management
+- External logger integration
+- Diagnostic capabilities
+
+### **🎯 Implementačné Zásady Pre Nový Projekt**
+
+**1. Anti-God-Level Strategy**
+```csharp
+// Max 500 lines per file - VŽDY!
+// Ak súbor rastie nad 500 lines → split immediately
+
+// Partial classes od prvého dňa:
+public partial class AdvancedDataGrid : UserControl  // Main file
+public partial class AdvancedDataGrid              // PublicAPI file  
+public partial class AdvancedDataGrid              // Services file
+public partial class AdvancedDataGrid              // Events file
+```
+
+**2. Test-First Package Development**
+```csharp
+// Demo app s package reference od začiatku
+// Každá nová feature → test button v demo app
+// Žiadne "dokončím neskôr" - kompletné implementácie okamžite
+```
+
+**3. Service Integration Pattern**
+```csharp
+// Služby sa deklarujú, inicializujú A používajú súčasne
+private CompressionService _compression;          // Declare
+_compression = new CompressionService();          // Initialize  
+var compressed = _compression.Compress(data);     // Use immediately
+```
+
+**4. Complete Implementation Rule**
+```csharp
+// Žiadne TODO placeholders v public API!
+// Každá public metóda má plnú implementáciu
+// Ak nie je dokončená → nie je public
+```
+
+**5. Package-First Testing**
+```bash
+# Každý commit:
+dotnet pack                           # Create package
+dotnet build demo --package-ref       # Test s package reference
+# Nie development testing s project reference!
+```
+
+### **🚀 Očakávané Výhody Nového Prístupu**
+
+**1. Maintainability**
+- Small, focused files (max 500 lines)
+- Clear separation of concerns
+- Easy code reviews a merge conflicts
+
+**2. Scalability**  
+- Easy pridávanie nových komponentov
+- Modular architecture
+- Independent component development
+
+**3. Quality**
+- Complete implementations (no TODOs in public API)
+- Integrated services (no unused code)
+- Production-ready od začiatku
+
+**4. Developer Experience**
+- Package-first testing approach
+- Comprehensive demo application  
+- Clear API documentation
+- Easy onboarding pre nových developerov
+
+---
+
+## 🎯 FINÁLNE IMPLEMENTAČNÉ ROZHODNUTIA
+
+### **🧩 LoggerComponent Decisions**
+
+#### **❓ File Rotation Strategy**
+**Koľko starých log súborov držať a rotation podľa času alebo veľkosti?**
+
+**✅ ROZHODNUTIE:**
+```csharp
+// Daily rotation s optional size chunking
+// Bez size limit: app_2025-01-10.log (jeden súbor na deň)
+// S size limit: app_2025-01-10_1.log, app_2025-01-10_2.log, ...
+// Nový deň = reset na _1, NEMAZAŤ staré súbory (aplikácia si to vyrieši)
+```
+
+#### **❓ Thread Safety Approach**
+**SemaphoreSlim (async) alebo lock (sync) pre thread safety?**
+
+**✅ ROZHODNUTIE:** 
+```csharp
+// Channel (Producer-Consumer) s guaranteed sequential order
+// - UI safe: žiadne blocking aj pri intensive logging (1000+ logs/sec)
+// - Sequential order: guaranteed poradie v súbore  
+// - High performance: queue-based s background writer
+```
+
+#### **❓ Logger Integration**
+**Real Microsoft.Extensions.Logging alebo mock logger?**
+
+**✅ ROZHODNUTIE:**
+```csharp
+// Balík: Null logger support - funguje bez crash ak žiadny logger
+// Demo app: Real Microsoft.Extensions.Logging (Console + Debug)
+// _logger?.LogInformation("message"); // Safe call pattern
+```
+
+#### **❓ Message Loss Prevention**
+**Ako zabrániť strate správ pri crash?**
+
+**✅ ROZHODNUTIE:**
+```csharp
+// Channel + Periodic Flush (100ms) + Immediate Critical Flush
+// - ERROR/FATAL messages: immediate disk write
+// - Other messages: batch flush každých 10 messages alebo 100ms timer
+// - Graceful shutdown: force flush všetkých pending messages
+// - OS buffer flush: garantovaný disk write
+// - Temp file cleanup: 6h idle + immediate delete on normal shutdown
+```
+
+### **📊 AdvancedWinUiDataGrid Decisions**
+
+#### **❓ Data Model Architecture**
+**Cell-centric vs Row-centric vs Hybrid model?**
+
+**✅ ROZHODNUTIE: HYBRID**
+```csharp
+// Best of both worlds:
+public class DataRow 
+{
+    private Dictionary<string, object?> _data;     // Row-based storage (fast bulk)
+    private Dictionary<string, CellUIState> _cellStates; // Cell objects (UI state)
+    
+    // Row operations: Import/Export/Search (performance)
+    // Cell operations: Selection/Validation/Styling (flexibility)
+}
+```
+
+#### **❓ UI Base Technology**
+**ItemRepeater (custom) vs extend Microsoft DataGrid?**
+
+**✅ ROZHODNUTIE: ItemRepeater**
+```csharp
+// Úplná kontrola nad virtualization, rendering, keyboard navigation
+// Custom scrolling, selection, advanced features
+// Maximálna flexibilita pre complex requirements
+```
+
+#### **❓ Service Integration Pattern**  
+**Dependency Injection vs Factory vs Internal instantiation?**
+
+**✅ ROZHODNUTIE: Internal DI s Clean Public API**
+```csharp
+public class AdvancedDataGrid : UserControl
+{
+    // Internal modules (user ich nevidí)
+    private readonly IValidationModule _validation;
+    private readonly ISearchModule _search;
+    private readonly IPerformanceModule _performance;
+    
+    // Clean public API
+    public async Task InitializeAsync(columns, validationConfig, logger);
+}
+```
+
+#### **❓ Memory Management Strategy**
+**Full virtualization vs Windowing vs Hybrid pre large datasets?**
+
+**✅ ROZHODNUTIE: Intelligent Windowing**
+```csharp
+// Multi-level memory management:
+// - Visible viewport: Full objects (immediate access) 
+// - Buffer zones: Compressed cache (quick access ~10ms)
+// - Cold storage: Disk/DB (lazy load ~50-100ms)
+// - Auto-cleanup temp files: 6h idle + immediate on normal shutdown
+```
+
+#### **❓ Validation Scope Strategy**
+**Background vs Progressive vs On-demand validation celého datasetu?**
+
+**✅ ROZHODNUTIE: Always All Validations**
+```csharp
+// Unified validation engine - same rules, different triggers:
+// Real-time (edit): Cell + Cross-column + Business rules (ALL)
+// Bulk (import): Cell + Cross-column + Business rules (ALL same rules)
+// NEVER skip any validation type - complete validation coverage vždy
+```
+
+#### **❓ Special Columns Positioning**
+**Fixed positioning vs Configurable vs Manual ordering?**
+
+**✅ ROZHODNUTIE: Fixed Positioning Logic**
+```csharp
+// Automatic positioning rules:
+// 1. CheckBox (if enabled): FIRST position
+// 2. User-defined columns: MIDDLE positions
+// 3. ValidationAlerts: LAST (if no DeleteRows) or SECOND-TO-LAST  
+// 4. DeleteRows (if enabled): LAST position
+
+// Examples:
+// [CheckBox][User1][User2][ValidationAlerts][DeleteRows]
+// [User1][User2][User3][ValidationAlerts] (no DeleteRows)
+```
+
+---
+
+---
+
+## 🎯 FINÁLNY SÚHRN - NOVÝ VS. AKTUÁLNY PROJEKT
+
+### **🆚 Porovnanie Projektov**
+
+| **Aspekt** | **Aktuálny Projekt** | **Nový Projekt** |
+|------------|---------------------|------------------|
+| **Funkcionalita** | 65+ public API metód | **IDENTICKÁ** - 65+ public API metód |
+| **File Organization** | God-level files → rozdelené post-hoc | **Anti-god-level od začiatku** |
+| **Performance Services** | Implementované ale neintegrované | **Integrované od začiatku** |
+| **Public API** | TODO placeholders | **Complete implementations** |
+| **Validation Scope** | Dataset scope issues | **Full dataset validation** |
+| **Testing** | Project reference → package reference | **Package reference od začiatku** |
+| **Logging** | Základné logovanie | **Comprehensive logging system** |
+| **Special Columns** | Manual positioning | **Automatic positioning** |
+| **Custom Validation** | Implementované v balíku | **Interface v aplikácii** |
+
+### **🎉 Očakávané Výsledky Nového Projektu**
+
+**✅ Čo bude LEPŠIE:**
+- **Perfect Architecture** - od prvého dňa správne organizované
+- **Complete Functionality** - žiadne TODO placeholders
+- **Integrated Services** - všetky performance features funkcné
+- **Comprehensive Logging** - debug-friendly s context informáciami
+- **Package-First Development** - testované v produkčnom stave
+- **Maintainable Codebase** - rozumné file sizes, logical separation
+
+**✅ Čo bude IDENTICKÉ:**
+- **Public API** - všetkých 65+ metód s rovnakými parametrami
+- **Funkcionalita** - import/export, validation, search, navigation, special columns
+- **Performance** - virtualization, caching, optimization
+- **User Experience** - keyboard shortcuts, mouse interactions, UI features
+
+**✅ Dodatočné Vylepšenia:**
+- **Null Logger Support** - funguje bez external loggera
+- **Automatic Special Column Positioning** - ValidAlerts second-to-last, DeleteRow last
+- **Application-Defined Validation** - custom business rules mimo balíka
+- **Enhanced Error Context** - comprehensive error logging s full context
+
+### **🚀 Implementačný Proces**
+
+**1. Štart s LoggerComponent** (1 týždeň)
+- Najjednoduchší komponent na začatie
+- Otestuje basic package infrastructure
+- Potrebný pre comprehensive logging v DataGrid
+
+**2. AdvancedDataGrid Foundation** (2 týždne)  
+- Partial class architecture od začiatku
+- Basic UI a service structure
+- Service integration pattern
+
+**3. Feature Implementation** (8-9 týždňov)
+- Import/Export system
+- Validation engine  
+- Navigation & Selection
+- Search & Filter
+- Performance features
+- Special columns
+
+**4. Testing & Polish** (1 týždeň)
+- Comprehensive demo app
+- Package reference testing
+- Documentation finalization
+
+---
+
+## 📞 READY TO START! 
+
+**Táto dokumentácia poskytuje:**
+- ✅ **Kompletný architectural blueprint**
+- ✅ **Detailed API specifications** s plnými parametrami
+- ✅ **Implementation roadmap** na 12-14 týždňov  
+- ✅ **Lessons learned** z aktuálneho projektu
+- ✅ **Best practices** pre WinUI3 package development
+
+**Môžeme začať implementáciu hneď teraz!** 🎯
+
+Nový projekt bude mať **identickú funkcionalitu** ako aktuálny, ale s **perfect architecture** od prvého dňa vývoja.

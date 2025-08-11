@@ -1,0 +1,41 @@
+<!-- Demo Application - PACKAGE REFERENCE Testing -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    
+    <!-- Application properties -->
+    <!-- <ApplicationManifest>app.manifest</ApplicationManifest> -->
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CRITICAL: Package reference, NOT project reference! -->
+    <!-- Testing package v jeho finálnom stave -->
+    
+    <!-- WinUI3 support -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    
+    <!-- External logging implementation for testing -->
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
+    
+    <!-- TEMPORARY: Project reference for testing (switch to package reference later) -->
+    <ProjectReference Include="..\RpaWinUiComponentsPackage\RpaWinUiComponentsPackage.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
