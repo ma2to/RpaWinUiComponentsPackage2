@@ -4,7 +4,17 @@
       "Bash(dotnet build)",
       "Bash(dotnet build:*)",
       "Bash(powershell:*)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(move \"Services\\Core\\DynamicTableCore.cs\" \"Modules\\Table\\Services\"\")",
+      "Bash(move ServicesCoreDynamicTableCore.cs ModulesTableServices)",
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(nuget add:*)",
+      "Bash(cp:*)",
+      "Bash(copy:*)"
     ],
     "deny": []
   }

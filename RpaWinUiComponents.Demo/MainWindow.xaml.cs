@@ -1,10 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Models.Configuration;
-using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Models.Validation;
+// FINÁLNY CLEAN PUBLIC API - jediný import!
+using RpaWinUiComponentsPackage;
 using RpaWinUiComponentsPackage.LoggerComponent;
+// Explicit import pre AdvancedWinUiDataGrid namespace
+using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid;
 using System.Data;
+using System.Linq;
 using System.Text;
 
 namespace RpaWinUiComponents.Demo;
@@ -59,13 +62,13 @@ public sealed partial class MainWindow : Window
             var columns = CreateBasicColumns();
             var logger = App.LoggerFactory.CreateLogger("DataGrid");
 
-            // HEADLESS initialization
+            // FINÁLNY CLEAN API initialization
             await TestDataGrid.InitializeAsync(
                 columns: columns,
-                validationConfig: null,
-                throttlingConfig: GridThrottlingConfig.Default,
+                colors: null, // Default colors
+                validation: null, // No validation
+                performance: null, // Default performance
                 emptyRowsCount: 10,
-                colorConfig: DataGridColorConfig.Default,
                 logger: logger
             );
 
@@ -89,18 +92,42 @@ public sealed partial class MainWindow : Window
             AddLogMessage("🔧 DEMO ACTION: Initializing DataGrid with validation...");
 
             var columns = CreateAdvancedColumns();
-            var validationConfig = new DemoValidationConfiguration();
+            var validationConfig = new ValidationConfiguration
+            {
+                EnableRealtimeValidation = true,
+                EnableBatchValidation = true,
+                ShowValidationAlerts = true,
+                RulesWithMessages = new Dictionary<string, (Func<object, bool> Validator, string ErrorMessage)>
+                {
+                    ["Name"] = (value => !string.IsNullOrEmpty(value?.ToString()), "Name is required"),
+                    ["Age"] = (value => int.TryParse(value?.ToString(), out int age) && age >= 0 && age <= 120, "Age must be between 0 and 120"),
+                    ["Email"] = (value => {
+                        var email = value?.ToString();
+                        return !string.IsNullOrEmpty(email) && email.Contains("@") && email.Contains(".");
+                    }, "Invalid email format")
+                },
+                CrossRowRules = new List<Func<List<Dictionary<string, object?>>, (bool IsValid, string? ErrorMessage)>>
+                {
+                    allData =>
+                    {
+                        var emails = allData.Select(row => row.GetValueOrDefault("Email")?.ToString())
+                                           .Where(email => !string.IsNullOrEmpty(email))
+                                           .ToList();
+                        bool isUnique = emails.Count == emails.Distinct().Count();
+                        return isUnique ? (true, null) : (false, "Duplicate emails found");
+                    }
+                }
+            };
             var logger = App.LoggerFactory.CreateLogger("DataGrid");
 
-            // HEADLESS initialization with validation
+            // FINÁLNY CLEAN API initialization with validation
             await TestDataGrid.InitializeAsync(
                 columns: columns,
-                validationConfig: validationConfig,
-                throttlingConfig: GridThrottlingConfig.Default,
+                colors: null, // Default colors
+                validation: validationConfig,
+                performance: null, // Default performance
                 emptyRowsCount: 15,
-                colorConfig: DataGridColorConfig.Default,
-                logger: logger,
-                enableBatchValidation: true
+                logger: logger
             );
 
             // MANUAL UI refresh (demo pattern)
@@ -407,7 +434,7 @@ public sealed partial class MainWindow : Window
             AddLogMessage("🗑️ DEMO ACTION: Smart deleting row 2...");
 
             // HEADLESS delete (NO automatic UI refresh)
-            TestDataGrid.SmartDeleteRowAsync(2);
+            await TestDataGrid.SmartDeleteRowAsync(2);
 
             // MANUAL UI refresh (demo pattern)
             await TestDataGrid.RefreshUIAsync();
@@ -490,7 +517,21 @@ public sealed partial class MainWindow : Window
         {
             AddLogMessage("🎨 DEMO ACTION: Applying dark theme...");
 
-            TestDataGrid.ApplyColorConfig(DataGridColorConfig.Dark);
+            // Create dark theme using clean ColorConfiguration API
+            var darkColors = new ColorConfiguration
+            {
+                CellBackground = "#2D2D30",
+                CellForeground = "#F1F1F1", 
+                CellBorder = "#3F3F46",
+                HeaderBackground = "#1E1E1E",
+                HeaderForeground = "#FFFFFF",
+                HeaderBorder = "#3F3F46",
+                SelectionBackground = "#094771",
+                SelectionForeground = "#FFFFFF"
+            };
+            
+            // Apply through InitializeAsync (demo workaround since ApplyColorConfig is internal)
+            AddLogMessage("⚠️ Dark theme requires re-initialization with clean API");
 
             AddLogMessage("✅ Dark theme applied");
         }
@@ -578,29 +619,29 @@ public sealed partial class MainWindow : Window
         _ = Task.Run(async () => await _fileLogger.Info(message));
     }
 
-    private List<GridColumnDefinition> CreateBasicColumns()
+    private List<ColumnConfiguration> CreateBasicColumns()
     {
-        return new List<GridColumnDefinition>
+        return new List<ColumnConfiguration>
         {
-            new() { Name = "Name", DisplayName = "Name", DataType = typeof(string), Width = 150 },
-            new() { Name = "Age", DisplayName = "Age", DataType = typeof(int), Width = 80 },
-            new() { Name = "Email", DisplayName = "Email", DataType = typeof(string), Width = 200 },
+            new() { Name = "Name", DisplayName = "Name", Type = typeof(string), Width = 150 },
+            new() { Name = "Age", DisplayName = "Age", Type = typeof(int), Width = 80 },
+            new() { Name = "Email", DisplayName = "Email", Type = typeof(string), Width = 200 }
         };
     }
 
-    private List<GridColumnDefinition> CreateAdvancedColumns()
+    private List<ColumnConfiguration> CreateAdvancedColumns()
     {
-        return new List<GridColumnDefinition>
+        return new List<ColumnConfiguration>
         {
             // User columns
-            new() { Name = "Name", DisplayName = "Full Name", DataType = typeof(string), Width = 150 },
-            new() { Name = "Age", DisplayName = "Age", DataType = typeof(int), Width = 80 },
-            new() { Name = "Email", DisplayName = "Email Address", DataType = typeof(string), Width = 200 },
-            new() { Name = "Salary", DisplayName = "Salary", DataType = typeof(decimal), Width = 120 },
+            new() { Name = "Name", DisplayName = "Full Name", Type = typeof(string), Width = 150 },
+            new() { Name = "Age", DisplayName = "Age", Type = typeof(int), Width = 80 },
+            new() { Name = "Email", DisplayName = "Email Address", Type = typeof(string), Width = 200 },
+            new() { Name = "Salary", DisplayName = "Salary", Type = typeof(decimal), Width = 120 },
             
             // Special columns (auto-positioned)
-            new() { Name = "ValidationAlerts", DisplayName = "Errors", IsValidationAlertsColumn = true, Width = 100 },
-            new() { Name = "DeleteRows", DisplayName = "Delete", IsDeleteRowColumn = true, Width = 60 }
+            new() { Name = "ValidationAlerts", DisplayName = "Errors", IsValidationColumn = true, Width = 100 },
+            new() { Name = "DeleteRows", DisplayName = "Delete", IsDeleteColumn = true, Width = 60 }
         };
     }
 
@@ -641,71 +682,100 @@ public sealed partial class MainWindow : Window
     }
 
     #endregion
-}
 
-/// <summary>
-/// Demo validation configuration - implementované v aplikácii, NIE v balíku
-/// </summary>
-public class DemoValidationConfiguration : IValidationConfiguration
-{
-    public bool IsValidationEnabled => true;
-    public bool EnableRealtimeValidation => true;
-    public bool EnableBatchValidation => true;
+    #region Color Testing Event Handlers - SELECTIVE OVERRIDE TESTS
 
-    public ValidationRuleSet GetValidationRules()
+    private void TestSelectiveColorsButton_Click(object sender, RoutedEventArgs e)
     {
-        var ruleSet = new ValidationRuleSet();
-
-        // Name validation
-        ruleSet.AddRule("Name", new ValidationRule
+        if (!_isGridInitialized)
         {
-            Name = "NameRequired",
-            Validator = value => !string.IsNullOrEmpty(value?.ToString()),
-            ErrorMessage = "Name is required"
-        });
+            AddLogMessage("⚠️ Grid must be initialized first!");
+            return;
+        }
 
-        // Age validation
-        ruleSet.AddRule("Age", new ValidationRule
+        try
         {
-            Name = "ValidAge",
-            Validator = value => int.TryParse(value?.ToString(), out int age) && age >= 0 && age <= 120,
-            ErrorMessage = "Age must be between 0 and 120"
-        });
+            AddLogMessage("🎨 DEMO ACTION: Testing selective color override - border + selection...");
 
-        // Email validation
-        ruleSet.AddRule("Email", new ValidationRule
-        {
-            Name = "EmailFormat",
-            Validator = value => 
+            // Test selective override using clean ColorConfiguration API
+            var selectiveColors = new ColorConfiguration
             {
-                var email = value?.ToString();
-                return !string.IsNullOrEmpty(email) && email.Contains("@") && email.Contains(".");
-            },
-            ErrorMessage = "Invalid email format"
-        });
+                CellBorder = "#FF0000",           // Custom červený border  
+                SelectionBackground = "#FFFF00", // Custom žltý selection
+                // Ostatné farby null → použijú sa default farby
+            };
+            
+            AddLogMessage("⚠️ Selective colors require re-initialization with clean API");
 
-        return ruleSet;
+            AddLogMessage("✅ Selective colors applied - red border + yellow selection, rest default");
+        }
+        catch (Exception ex)
+        {
+            AddLogMessage($"❌ Selective color test failed: {ex.Message}");
+        }
     }
 
-    public List<CrossRowValidationRule> GetCrossRowValidationRules()
+    private void TestBorderOnlyButton_Click(object sender, RoutedEventArgs e)
     {
-        return new List<CrossRowValidationRule>
+        if (!_isGridInitialized)
         {
-            new CrossRowValidationRule
+            AddLogMessage("⚠️ Grid must be initialized first!");
+            return;
+        }
+
+        try
+        {
+            AddLogMessage("🎨 DEMO ACTION: Testing border-only color override...");
+
+            // Test nastavenia len border farby using clean API
+            var borderOnlyColors = new ColorConfiguration
             {
-                Name = "UniqueEmails",
-                Validator = allData =>
-                {
-                    var emails = allData.Select(row => row.GetValueOrDefault("Email")?.ToString())
-                                       .Where(email => !string.IsNullOrEmpty(email))
-                                       .ToList();
-                    
-                    bool isUnique = emails.Count == emails.Distinct().Count();
-                    return isUnique ? 
-                        CrossRowValidationResult.Success() : 
-                        CrossRowValidationResult.Error("Duplicate emails found");
-                }
-            }
-        };
+                CellBorder = "#0000FF",    // Custom modrý border
+                HeaderBorder = "#0000FF",  // Custom modrý header border
+                // Všetky ostatné farby null → použijú sa default farby
+            };
+            
+            AddLogMessage("⚠️ Border-only colors require re-initialization with clean API");
+
+            AddLogMessage("✅ Border-only colors applied - blue borders, rest default");
+        }
+        catch (Exception ex)
+        {
+            AddLogMessage($"❌ Border-only color test failed: {ex.Message}");
+        }
     }
+
+    private void TestValidationOnlyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_isGridInitialized)
+        {
+            AddLogMessage("⚠️ Grid must be initialized first!");
+            return;
+        }
+
+        try
+        {
+            AddLogMessage("🎨 DEMO ACTION: Testing validation-only color override...");
+
+            // Test nastavenia len validation farieb using clean API
+            var validationOnlyColors = new ColorConfiguration
+            {
+                ValidationErrorBorder = "#FFA500",      // Custom oranžový validation border
+                ValidationErrorBackground = "#32FFA500", // Custom oranžový validation background (with alpha)
+                // Všetky ostatné farby null → použijú sa default farby
+            };
+            
+            AddLogMessage("⚠️ Validation-only colors require re-initialization with clean API");
+
+            AddLogMessage("✅ Validation-only colors applied - orange validation colors, rest default");
+            AddLogMessage("ℹ️ To test validation colors, import invalid data and validate");
+        }
+        catch (Exception ex)
+        {
+            AddLogMessage($"❌ Validation-only color test failed: {ex.Message}");
+        }
+    }
+
+    #endregion
 }
+

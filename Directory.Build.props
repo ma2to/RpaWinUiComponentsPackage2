@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!-- Disable problematic PRI generation globally -->
+    <GeneratePri>false</GeneratePri>
+    <CreatePriConfigXml>false</CreatePriConfigXml>
+    <UsePriGen>false</UsePriGen>
+    <EnableDefaultPriItems>false</EnableDefaultPriItems>
+    <MrtCoreSkip>true</MrtCoreSkip>
+  </PropertyGroup>
+</Project>

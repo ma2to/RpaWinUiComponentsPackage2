@@ -1,4 +1,4 @@
-<!-- Demo Application - PACKAGE REFERENCE Testing -->
+﻿<!-- Demo Application - PACKAGE REFERENCE Testing -->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -10,27 +10,53 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     
+    <!-- WinUI bootstrap configuration -->
+    <WindowsAppSDKBootstrapInitialize>true</WindowsAppSDKBootstrapInitialize>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
+    <GeneratePri>false</GeneratePri>
+    <CreatePriConfigXml>false</CreatePriConfigXml>
+    <UsePriGen>false</UsePriGen>
+    <EnableDefaultPriItems>false</EnableDefaultPriItems>
+    <EnableStaticWebAssets>false</EnableStaticWebAssets>
+    <SkipPriGen>true</SkipPriGen>
+    <MrtCoreSkip>true</MrtCoreSkip>
+    <DisablePriGeneration>true</DisablePriGeneration>
+    <SkipMrtCoreInitialization>true</SkipMrtCoreInitialization>
+    <EnableXamlGeneratedMain>false</EnableXamlGeneratedMain>
+    <UseMaui>false</UseMaui>
+    <UseMsixBundling>false</UseMsixBundling>
+    <UseRidGraph>true</UseRidGraph>
+    <WindowsPackageType>None</WindowsPackageType>
+    
     <!-- Application properties -->
-    <!-- <ApplicationManifest>app.manifest</ApplicationManifest> -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>
-    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
-    <UseWinUI>true</UseWinUI>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x86'">win-x86</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- CRITICAL: Package reference, NOT project reference! -->
-    <!-- Testing package v jeho finálnom stave -->
+    <!-- CRITICAL: Project reference for development testing -->
+    <!-- Testing latest modular structure -->
     
-    <!-- WinUI3 support -->
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <!-- WinUI Dependencies - required for demo app -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" IncludeAssets="all" GeneratePathProperty="true" />
     
     <!-- External logging implementation for testing -->
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
+    <PackageReference Include="RpaWinUiComponentsPackage" Version="2.1.2" />
     
-    <!-- TEMPORARY: Project reference for testing (switch to package reference later) -->
+    <!-- Use project reference for development testing -->
     <ProjectReference Include="..\RpaWinUiComponentsPackage\RpaWinUiComponentsPackage.csproj" />
+    
+    <!-- <ProjectReference Include="..\RpaWinUiComponentsPackage\RpaWinUiComponentsPackage.csproj" /> -->
+    
+    <!-- Package reference with automatic dependencies -->
   </ItemGroup>
 
   <ItemGroup>

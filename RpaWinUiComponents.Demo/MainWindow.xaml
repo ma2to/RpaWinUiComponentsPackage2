@@ -3,7 +3,7 @@
     x:Class="RpaWinUiComponents.Demo.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Controls"
+    xmlns:controls="using:RpaWinUiComponentsPackage.AdvancedWinUiDataGrid"
     Title="RPA WinUI Components Demo - Package Reference Testing">
 
     <Grid>
@@ -73,6 +73,9 @@
                         <TextBlock Text="Colors:" VerticalAlignment="Center" FontWeight="SemiBold"/>
                         <Button x:Name="ApplyDarkThemeButton" Content="Dark Theme" Click="ApplyDarkThemeButton_Click"/>
                         <Button x:Name="ResetColorsButton" Content="Reset Colors" Click="ResetColorsButton_Click"/>
+                        <Button x:Name="TestSelectiveColorsButton" Content="Test Selective" Click="TestSelectiveColorsButton_Click"/>
+                        <Button x:Name="TestBorderOnlyButton" Content="Border Only" Click="TestBorderOnlyButton_Click"/>
+                        <Button x:Name="TestValidationOnlyButton" Content="Validation Only" Click="TestValidationOnlyButton_Click"/>
                     </StackPanel>
                 </Border>
 
@@ -88,6 +91,7 @@
 
         <!-- Main DataGrid Testing Area -->
         <Border Grid.Row="1" BorderBrush="{ThemeResource ControlStrokeColorDefault}" BorderThickness="1" Margin="10,5">
+            <!-- Testing AdvancedDataGrid with simplified templates -->
             <controls:AdvancedDataGrid x:Name="TestDataGrid" />
         </Border>
 

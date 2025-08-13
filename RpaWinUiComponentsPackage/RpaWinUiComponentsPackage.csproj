@@ -27,17 +27,24 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <IncludeBuildOutput>true</IncludeBuildOutput>
+    
+    <!-- Windows App SDK Self-Contained Support -->
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <UseRidGraph>false</UseRidGraph>
+    
+    <!-- Runtime identifiers for self-contained deployment -->
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
 
     <!-- Package Information -->
     <PackageId>RpaWinUiComponentsPackage</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.1.2</Version>
     <Authors>RPA Team</Authors>
     <Company>RPA Company</Company>
     <Product>RPA WinUI Components Package</Product>
     <Description>Professional WinUI3 Components Package: AdvancedDataGrid + LoggerComponent</Description>
     <PackageTags>WinUI3;DataGrid;Logger;Components;Package;NET8</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>v2.0.0: New modular architecture with LoggerComponent + AdvancedDataGrid</PackageReleaseNotes>
+    <PackageReleaseNotes>v2.1.0: Added automatic Windows App SDK runtime dependencies + Self-contained support</PackageReleaseNotes>
 
     <!-- Assembly Information -->
     <AssemblyTitle>RPA WinUI Components Package</AssemblyTitle>
@@ -51,8 +58,11 @@
 
   <!-- Dependencies - Minimal as per newProject.md -->
   <ItemGroup>
-    <!-- WinUI3 support -->
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <!-- WinUI3 support with private assets -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" 
+                      IncludeAssets="all" 
+                      PrivateAssets="none"
+                      GeneratePathProperty="true" />
     
     <!-- Logging abstractions only -->
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
@@ -60,9 +70,30 @@
     <!-- Dependency injection -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
     
+    <!-- ObjectPool for performance optimization -->
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="9.0.8" />
+    
     <!-- System dependencies -->
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.8" />
+  </ItemGroup>
+
+  <!-- Ensure Windows App SDK runtime is included in applications that use this package -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)\build\**" Pack="true" PackagePath="build" />
+    <None Include="$(MSBuildThisFileDirectory)\buildTransitive\**" Pack="true" PackagePath="buildTransitive" />
+  </ItemGroup>
+
+  <!-- Copy Windows App SDK runtime files to output -->
+  <ItemGroup Condition="'$(WindowsAppSDKSelfContained)' == 'true'">
+    <None Include="$(PkgMicrosoft_WindowsAppSDK)\runtimes\win-x64\native\**" 
+          CopyToOutputDirectory="PreserveNewest" 
+          Pack="true" 
+          PackagePath="runtimes\win-x64\native\" />
+    <None Include="$(PkgMicrosoft_WindowsAppSDK)\lib\net6.0-windows10.0.17763.0\**" 
+          CopyToOutputDirectory="PreserveNewest" 
+          Pack="true" 
+          PackagePath="lib\net6.0-windows10.0.17763.0\" />
   </ItemGroup>
 
 </Project>
