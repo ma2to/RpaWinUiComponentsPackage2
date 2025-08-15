@@ -97,11 +97,14 @@ public class DataCellModel : INotifyPropertyChanged
     private bool _isReadOnly = false;
     private bool _isValid = true;
     private bool _isEditing = false;
+    private bool _isSelected = false;
+    private bool _isFocused = false;
     private string? _validationError;
     private double _width = 100; // Width for proper header/cell alignment
     private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.White);
     private SolidColorBrush _foregroundBrush = new SolidColorBrush(Colors.Black);
     private SolidColorBrush _borderBrush = new SolidColorBrush(Colors.LightGray);
+    private Microsoft.UI.Xaml.Thickness _borderThickness = new Microsoft.UI.Xaml.Thickness(1);
 
     public object? Value
     {
@@ -151,6 +154,18 @@ public class DataCellModel : INotifyPropertyChanged
         set => SetProperty(ref _isEditing, value);
     }
 
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
+
+    public bool IsFocused
+    {
+        get => _isFocused;
+        set => SetProperty(ref _isFocused, value);
+    }
+
     public string? ValidationError
     {
         get => _validationError;
@@ -179,6 +194,12 @@ public class DataCellModel : INotifyPropertyChanged
     {
         get => _borderBrush;
         set => SetProperty(ref _borderBrush, value);
+    }
+
+    public Microsoft.UI.Xaml.Thickness BorderThickness
+    {
+        get => _borderThickness;
+        set => SetProperty(ref _borderThickness, value);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

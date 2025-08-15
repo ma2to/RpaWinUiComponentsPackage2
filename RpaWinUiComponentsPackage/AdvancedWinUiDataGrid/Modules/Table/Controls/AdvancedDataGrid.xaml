@@ -20,7 +20,7 @@
         <!-- Header template - properly bound to HeaderCellModel with resize capability -->
         <DataTemplate x:Key="HeaderTemplate">
             <Border x:Name="HeaderBorder"
-                    BorderThickness="0,0,1,1"
+                    BorderThickness="1"
                     Padding="6,4"
                     Background="{Binding BackgroundBrush}"
                     BorderBrush="{Binding BorderBrush}"
@@ -37,10 +37,11 @@
                                TextTrimming="CharacterEllipsis"
                                ToolTipService.ToolTip="{Binding DisplayName}" />
                     
-                    <!-- Resize handle - invisible rectangle at right edge for column resize -->
+                    <!-- Resize handle - ±2px od hrany bunky pre ľahšiu interakciu -->
                     <Rectangle x:Name="ResizeHandle"
-                               Width="6"
+                               Width="5"
                                HorizontalAlignment="Right"
+                               Margin="0,0,-2.5,0"
                                Fill="Transparent"
                                PointerPressed="ResizeHandle_PointerPressed"
                                PointerMoved="ResizeHandle_PointerMoved"
@@ -68,26 +69,33 @@
             </Border>
         </DataTemplate>
 
-        <!-- Cell template - KVALITNÉ s editability -->
+        <!-- Cell template - KVALITNÉ s editability, selection a focus -->
         <DataTemplate x:Key="CellTemplate">
             <Border x:Name="CellBorder"
-                    BorderThickness="0,0,1,0"
+                    BorderThickness="{Binding BorderThickness}"
                     Padding="6,2"
                     Background="{Binding BackgroundBrush}"
                     BorderBrush="{Binding BorderBrush}"
                     Width="{Binding Width}"
-                    Height="32">
+                    Height="32"
+                    RightTapped="CellBorder_RightTapped"
+                    PointerPressed="CellBorder_PointerPressed"
+                    PointerMoved="CellBorder_PointerMoved"
+                    PointerReleased="CellBorder_PointerReleased">
                 <Grid>
-                    <!-- Display mode - CLICKABLE TextBlock -->
-                    <TextBlock x:Name="DisplayText" 
-                               Text="{Binding DisplayText}"
-                               Foreground="{Binding ForegroundBrush}"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Left"
-                               TextTrimming="CharacterEllipsis"
-                               Margin="4,2,4,2"
-                               Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityInverseConverter}}"
-                               Tapped="DisplayText_Tapped" />
+                    <!-- Display mode - FULL CLICKABLE AREA -->
+                    <Grid x:Name="DisplayArea"
+                          Background="Transparent"
+                          Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityInverseConverter}}">
+                        <TextBlock x:Name="DisplayText" 
+                                   Text="{Binding DisplayText}"
+                                   Foreground="{Binding ForegroundBrush}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Left"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="4,2,4,2"
+                                   IsHitTestVisible="False" />
+                    </Grid>
                     
                     <!-- Edit mode - TextBox -->
                     <TextBox x:Name="EditTextBox"
@@ -95,11 +103,20 @@
                              Foreground="{Binding ForegroundBrush}"
                              BorderThickness="0"
                              Padding="4,2"
-                             VerticalAlignment="Center"
+                             VerticalAlignment="Stretch"
                              HorizontalAlignment="Stretch"
                              Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
                              LostFocus="EditTextBox_LostFocus"
-                             KeyDown="EditTextBox_KeyDown" />
+                             KeyDown="EditTextBox_KeyDown"
+                             TextChanged="EditTextBox_TextChanged"
+                             IsSpellCheckEnabled="False"
+                             IsTextPredictionEnabled="False"
+                             AcceptsReturn="False"
+                             TextWrapping="Wrap"
+                             VerticalContentAlignment="Top"
+                             Header=""
+                             PlaceholderText=""
+                             ContextFlyout="{x:Null}" />
                 </Grid>
             </Border>
         </DataTemplate>
@@ -111,6 +128,8 @@
         <ScrollViewer x:Name="MainScrollViewer"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollMode="Auto"
+                      VerticalScrollMode="Auto"
                       ZoomMode="Disabled">
             <Grid x:Name="TableGrid">
                 <Grid.RowDefinitions>

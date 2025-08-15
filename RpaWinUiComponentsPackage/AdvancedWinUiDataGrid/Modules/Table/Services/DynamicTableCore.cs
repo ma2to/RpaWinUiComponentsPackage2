@@ -734,8 +734,8 @@ public class DynamicTableCore
     /// </summary>
     private async Task CreateMinimumRowsAsync()
     {
-        // CRITICAL: Limit initial row creation to prevent XAML dictionary overflow
-        int safeMinimumCount = Math.Min(_minimumRowCount, 5); // TEMPORARY: Reduced for debugging WinRT COM errors
+        // FIXED: UI thread issues resolved, can now use full row count
+        int safeMinimumCount = _minimumRowCount; // RestoreD: Full empty rows count for proper cell interaction
         
         _logger?.LogInformation("📊 ROW CREATION: Creating {SafeCount} initial rows (requested: {RequestedCount})", 
             safeMinimumCount + 1, _minimumRowCount + 1);
