@@ -55,33 +55,233 @@ public sealed partial class MainWindow : Window
 
     private async void InitButton_Click(object sender, RoutedEventArgs e)
     {
+        var globalStopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
         try
         {
-            AddLogMessage("🔧 DEMO ACTION: Initializing basic DataGrid...");
+            AddLogMessage("🔧 DEMO ACTION: Initializing basic DataGrid with comprehensive error logging...");
 
             var columns = CreateBasicColumns();
             var logger = App.LoggerFactory.CreateLogger("DataGrid");
+            
+            AddLogMessage($"📊 INIT STATE: Creating {columns.Count} columns for initialization");
+            foreach (var col in columns)
+            {
+                AddLogMessage($"   📋 Column: {col.Name} ({col.Type?.Name}) - Width: {col.Width}");
+            }
 
-            // FINÁLNY CLEAN API initialization
-            await TestDataGrid.InitializeAsync(
-                columns: columns,
-                colors: null, // Default colors
-                validation: null, // No validation
-                performance: null, // Default performance
-                emptyRowsCount: 10,
-                logger: logger
-            );
+            // Phase 1: CLEAN API initialization with comprehensive error handling
+            var initStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                AddLogMessage("🎨 INIT PHASE 1: Starting InitializeAsync...");
+                
+                await TestDataGrid.InitializeAsync(
+                    columns: columns,
+                    colors: null, // Default colors
+                    validation: null, // No validation
+                    performance: null, // Default performance
+                    emptyRowsCount: 3, // TEMPORARY: Minimal for debugging WinRT COM errors
+                    logger: logger
+                );
+                
+                initStopwatch.Stop();
+                AddLogMessage($"✅ INIT PHASE 1: InitializeAsync completed in {initStopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception initEx)
+            {
+                initStopwatch.Stop();
+                AddLogMessage($"🚨 INIT PHASE 1 ERROR: InitializeAsync failed after {initStopwatch.ElapsedMilliseconds}ms");
+                AddLogMessage($"   💥 Exception Type: {initEx.GetType().Name}");
+                AddLogMessage($"   💥 Exception Message: {initEx.Message}");
+                AddLogMessage($"   💥 Stack Trace: {initEx.StackTrace}");
+                
+                // Check for specific Int32.MaxValue error
+                if (initEx.Message.Contains("Int32.MaxValue") || initEx.Message.Contains("2147483647"))
+                {
+                    AddLogMessage("🚨 CRITICAL: Int32.MaxValue index overflow detected during initialization!");
+                    AddLogMessage("   This indicates a collection index or array size problem");
+                }
+                
+                await _fileLogger.Error(initEx, "DataGrid InitializeAsync failed with comprehensive details");
+                throw;
+            }
 
-            // MANUAL UI refresh (demo pattern)
-            await TestDataGrid.RefreshUIAsync();
+            // Phase 1.5: Add some sample data for testing (basic initialization)
+            var sampleDataStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                AddLogMessage("📝 INIT PHASE 1.5: Adding sample data for testing...");
+                
+                var testData = new List<Dictionary<string, object?>>
+                {
+                    new() { ["Name"] = "Sample User 1", ["Age"] = 25, ["Email"] = "user1@example.com" },
+                    new() { ["Name"] = "Sample User 2", ["Age"] = 30, ["Email"] = "user2@example.com" },
+                    new() { ["Name"] = "", ["Age"] = -5, ["Email"] = "invalid" }, // Invalid data for ValidationAlerts testing
+                };
+                
+                await TestDataGrid.ImportFromDictionaryAsync(testData);
+                sampleDataStopwatch.Stop();
+                AddLogMessage($"✅ INIT PHASE 1.5: Sample data added in {sampleDataStopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception sampleEx)
+            {
+                sampleDataStopwatch.Stop();
+                AddLogMessage($"🚨 INIT PHASE 1.5 ERROR: Sample data failed after {sampleDataStopwatch.ElapsedMilliseconds}ms");
+                AddLogMessage($"   💥 Exception: {sampleEx.Message}");
+                // Continue without sample data
+            }
+
+            // Phase 2: MANUAL UI refresh with comprehensive error handling
+            var refreshStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                AddLogMessage("🎨 INIT PHASE 2: Starting RefreshUIAsync...");
+                
+                // CRITICAL: Add WinRT COM exception detection
+                try
+                {
+                    await TestDataGrid.RefreshUIAsync();
+                }
+                catch (System.Runtime.InteropServices.COMException comEx)
+                {
+                    AddLogMessage("🚨 WinRT COM EXCEPTION DETECTED!");
+                    AddLogMessage($"   💥 COM Error Type: {comEx.GetType().FullName}");
+                    AddLogMessage($"   💥 COM Error Message: {comEx.Message}");
+                    AddLogMessage($"   💥 COM Error HResult: 0x{comEx.HResult:X8}");
+                    AddLogMessage($"   💥 COM Error Source: {comEx.Source}");
+                    
+                    // WinRT specific diagnostic info
+                    try
+                    {
+                        var totalRows = TestDataGrid.GetTotalRowCount();
+                        var columnCount = TestDataGrid.GetColumnCount();
+                        
+                        AddLogMessage($"   📊 Grid Context: TotalRows={totalRows}, ColumnCount={columnCount}");
+                        AddLogMessage($"   📊 Calculation: {totalRows} × {columnCount} = {(long)totalRows * columnCount} total cells");
+                        
+                        AddLogMessage("   🚨 DIAGNOSIS: WinRT COM interop failure during XAML binding!");
+                        AddLogMessage("   💡 SOLUTION: Switching from ObservableCollection to List<T> for WinRT compatibility");
+                    }
+                    catch (Exception diagEx)
+                    {
+                        AddLogMessage($"   📊 Diagnostic Error: {diagEx.Message}");
+                    }
+                    
+                    await _fileLogger.Error(comEx, "WinRT COM exception during UI refresh");
+                    throw;
+                }
+                catch (System.ArgumentException xamlEx) when (xamlEx.Message.Contains("Int32.MaxValue") || xamlEx.Message.Contains("index"))
+                {
+                    AddLogMessage("🚨 XAML BINDING ERROR DETECTED!");
+                    AddLogMessage($"   💥 XAML Error Type: {xamlEx.GetType().FullName}");
+                    AddLogMessage($"   💥 XAML Error Message: {xamlEx.Message}");
+                    AddLogMessage($"   💥 XAML Error Source: {xamlEx.Source}");
+                    
+                    if (xamlEx.Data != null && xamlEx.Data.Count > 0)
+                    {
+                        AddLogMessage("   📋 XAML Error Data:");
+                        foreach (var key in xamlEx.Data.Keys)
+                        {
+                            AddLogMessage($"      • {key}: {xamlEx.Data[key]}");
+                        }
+                    }
+                    
+                    // Get WinUI3 specific diagnostic info
+                    try
+                    {
+                        var totalRows = TestDataGrid.GetTotalRowCount();
+                        var columnCount = TestDataGrid.GetColumnCount();
+                        
+                        AddLogMessage($"   📊 Grid Context: TotalRows={totalRows}, ColumnCount={columnCount}");
+                        AddLogMessage($"   📊 Calculation: {totalRows} × {columnCount} = {(long)totalRows * columnCount} total cells");
+                        
+                        if ((long)totalRows * columnCount > 100000)
+                        {
+                            AddLogMessage("   🚨 DIAGNOSIS: Cell count exceeds WinUI3 ItemsRepeater dictionary limits!");
+                            AddLogMessage("   💡 SOLUTION: Reduce emptyRowsCount parameter or implement virtualization");
+                        }
+                    }
+                    catch (Exception diagEx)
+                    {
+                        AddLogMessage($"   📊 Diagnostic Error: {diagEx.Message}");
+                    }
+                    
+                    await _fileLogger.Error(xamlEx, "XAML Dictionary/Index overflow error detected");
+                    throw;
+                }
+                
+                refreshStopwatch.Stop();
+                AddLogMessage($"✅ INIT PHASE 2: RefreshUIAsync completed in {refreshStopwatch.ElapsedMilliseconds}ms");
+            }
+            catch (Exception refreshEx)
+            {
+                refreshStopwatch.Stop();
+                AddLogMessage($"🚨 INIT PHASE 2 ERROR: RefreshUIAsync failed after {refreshStopwatch.ElapsedMilliseconds}ms");
+                AddLogMessage($"   💥 Exception Type: {refreshEx.GetType().Name}");
+                AddLogMessage($"   💥 Exception Message: {refreshEx.Message}");
+                AddLogMessage($"   💥 Stack Trace: {refreshEx.StackTrace}");
+                
+                // Check for specific Int32.MaxValue error
+                if (refreshEx.Message.Contains("Int32.MaxValue") || refreshEx.Message.Contains("2147483647") || refreshEx.Message.Contains("index"))
+                {
+                    AddLogMessage("🚨 CRITICAL: Int32.MaxValue index overflow detected during UI refresh!");
+                    AddLogMessage("   This indicates a collection index problem in the UI rendering pipeline");
+                    
+                    // Log additional context for debugging
+                    try
+                    {
+                        var totalRows = TestDataGrid.GetTotalRowCount();
+                        var columnCount = TestDataGrid.GetColumnCount();
+                        var hasData = TestDataGrid.HasData;
+                        
+                        AddLogMessage($"   📊 Context: TotalRows={totalRows}, ColumnCount={columnCount}, HasData={hasData}");
+                    }
+                    catch (Exception contextEx)
+                    {
+                        AddLogMessage($"   📊 Context Error: {contextEx.Message}");
+                    }
+                }
+                
+                await _fileLogger.Error(refreshEx, "DataGrid RefreshUIAsync failed with comprehensive details");
+                throw;
+            }
 
             _isGridInitialized = true;
-            AddLogMessage("✅ DataGrid initialized successfully + UI refreshed");
+            globalStopwatch.Stop();
+            
+            AddLogMessage($"✅ DataGrid initialized successfully + UI refreshed in {globalStopwatch.ElapsedMilliseconds}ms total");
+            
+            // Final verification
+            try
+            {
+                var stats = $"Final stats: Rows={TestDataGrid.GetTotalRowCount()}, Columns={TestDataGrid.GetColumnCount()}, HasData={TestDataGrid.HasData}";
+                AddLogMessage($"📊 {stats}");
+            }
+            catch (Exception statsEx)
+            {
+                AddLogMessage($"⚠️ Stats retrieval failed: {statsEx.Message}");
+            }
         }
         catch (Exception ex)
         {
-            AddLogMessage($"❌ Initialization failed: {ex.Message}");
-            await _fileLogger.Error(ex, "DataGrid initialization failed");
+            globalStopwatch.Stop();
+            
+            AddLogMessage($"❌ GLOBAL INITIALIZATION FAILED after {globalStopwatch.ElapsedMilliseconds}ms");
+            AddLogMessage($"   💥 Final Exception Type: {ex.GetType().Name}");
+            AddLogMessage($"   💥 Final Exception Message: {ex.Message}");
+            
+            // Log the full exception details for debugging
+            var innerEx = ex.InnerException;
+            int innerLevel = 1;
+            while (innerEx != null && innerLevel <= 5)
+            {
+                AddLogMessage($"   💥 Inner Exception {innerLevel}: {innerEx.GetType().Name} - {innerEx.Message}");
+                innerEx = innerEx.InnerException;
+                innerLevel++;
+            }
+            
+            await _fileLogger.Error(ex, "DataGrid initialization failed - COMPREHENSIVE ERROR LOG");
         }
     }
 
@@ -626,6 +826,8 @@ public sealed partial class MainWindow : Window
             new() { Name = "Name", DisplayName = "Name", Type = typeof(string), Width = 150 },
             new() { Name = "Age", DisplayName = "Age", Type = typeof(int), Width = 80 },
             new() { Name = "Email", DisplayName = "Email", Type = typeof(string), Width = 200 }
+            
+            // ValidationAlerts stĺpec sa vytvára AUTOMATICKY podľa newProject.md rules
         };
     }
 

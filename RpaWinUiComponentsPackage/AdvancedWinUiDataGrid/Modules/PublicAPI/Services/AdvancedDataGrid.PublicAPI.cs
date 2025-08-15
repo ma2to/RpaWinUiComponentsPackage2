@@ -1,6 +1,5 @@
 using System.Data;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Models;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Services;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Performance.Models;

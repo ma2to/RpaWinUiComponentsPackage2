@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 using RpaWinUiComponentsPackage.LoggerComponent.Utilities;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;

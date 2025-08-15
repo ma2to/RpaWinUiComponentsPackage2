@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Models;
 
 namespace RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Controls;

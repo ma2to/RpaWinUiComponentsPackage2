@@ -36,7 +36,7 @@ Vytvoriť **profesionálny WinUI3 balík komponentov** pre .NET 8, ktorý bude:
 - **Framework**: WinUI3 + .NET 8.0-windows
 - **Package Type**: NuGet balík s viacerými komponentmi
 - **Namespace Pattern**: `RpaWinUiComponentsPackage.{ComponentName}.{Method}`
-- **Závislosti**: Iba Microsoft.Extensions.Logging.Abstractions (nie full Logging)
+- **Závislosti**: Iba Microsoft.Extensions.Logging.Abstractions (nie full Logging) - CRITICAL pre flexibilitu logovania
 - **Testovanie**: Samostatná demo aplikácia s package reference
 - **Architektúra**: Service-oriented s strict separation of concerns
 
@@ -89,6 +89,23 @@ RpaWinUiComponentsPackage.NewComponent.SomeMethod()
 
 ---
 
+### **📋 Logging Dependencies - CRITICAL**
+**Pravidlo pre flexibilitu logovania:**
+```xml
+<!-- BALÍK KOMPONENTOV: Iba abstractions! -->
+<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
+
+<!-- DEMO APLIKÁCIA: Môže používať konkrétne implementácie -->
+<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
+<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
+```
+
+**Dôvod:** Umožňuje aplikáciám používať rôzne logovacie systémy:
+- NLog, Serilog, built-in .NET logging, vlastné implementácie
+- Balík príjme `ILogger` interface z ľubovoľnej implementácie
+
+---
+
 ## 📂 ŠTRUKTÚRA BALÍKA
 
 ### **🏗️ Root Level Package Structure**
@@ -121,8 +138,13 @@ LoggerComponent/
 #### **🚧 AdvancedWinUiDataGrid - Modular Architecture (V PROGRESE)**
 ```
 AdvancedWinUiDataGrid/
-├── 📄 CleanAPI.cs                  # Clean public API entry point
-├── 📄 PublicAPI.cs                 # Legacy public API methods
+├── 📁 API/                         # ✅ Clean API s Configuration classes
+│   ├── AdvancedDataGrid.cs         # Main clean API wrapper
+│   └── Configurations/             # Strongly-typed config classes
+│       ├── ColumnConfiguration.cs, ColorConfiguration.cs
+│       ├── ValidationConfiguration.cs, PerformanceConfiguration.cs
+│       └── CleanValidationConfigAdapter.cs
+├── 📄 PublicAPI.cs                 # Legacy public API methods (DEPRECATED)
 ├── 📁 Controls/
 │   ├── AdvancedDataGrid.cs         # Main UI control
 │   └── AdvancedDataGrid.xaml       # XAML definition
@@ -144,10 +166,12 @@ AdvancedWinUiDataGrid/
 │   │   ├── Models/
 │   │   └── Services/
 │   ├── 📁 Table/                  # Core table management module
-│   │   ├── Controls/
-│   │   ├── Models/CellPosition.cs, CellRange.cs, CellUIState.cs, DataRow.cs, GridColumnDefinition.cs
+│   │   ├── Controls/AdvancedDataGrid.cs, AdvancedDataGrid.xaml  # ✅ UI controls s proper data binding
+│   │   ├── Models/CellPosition.cs, CellRange.cs, CellUIState.cs, DataRow.cs, GridColumnDefinition.cs,
+│   │   │   GridUIModels.cs        # ✅ UI models s INotifyPropertyChanged
 │   │   └── Services/AdvancedDataGrid.TableManagement.cs, AdvancedDataGridController.cs,
-│   │       DynamicTableCore.cs, SmartColumnNameResolver.cs, UnlimitedRowHeightManager.cs
+│   │       DynamicTableCore.cs, SmartColumnNameResolver.cs, UnlimitedRowHeightManager.cs,
+│   │       DataGridUIManager.cs   # ✅ Kvalitný UI rendering manager
 │   └── 📁 Validation/             # Validation module
 │       ├── Models/Validation/IValidationConfiguration.cs
 │       └── Services/
@@ -357,6 +381,8 @@ Task InitializeAsync(
     int emptyRowsCount = 15,
     DataGridColorConfig? colorConfig = null,
     ILogger? logger = null,                    // NULLABLE! Ak null = žiadne logovanie
+                                           // IMPORTANT: Balík používa Microsoft.Extensions.Logging.Abstractions
+                                           // Demo aplikácia môže používať Microsoft.Extensions.Logging
     bool enableBatchValidation = false,
     int maxSearchHistoryItems = 0,
     bool enableSort = false,
@@ -672,25 +698,33 @@ void ResetColorsToDefaults()  // Resetuje farby na default (okrem validation err
 
 ```
 AdvancedWinUiDataGrid/
-├── 📄 CleanAPI.cs                  # ✅ Clean namespace wrappers (provides clean namespace wrappers)
-├── 📄 PublicAPI.cs                 # ✅ Package info and recommended imports
+├── 📁 API/                         # ✅ CLEAN API ARCHITECTURE (implementované 2025)
+│   ├── AdvancedDataGrid.cs         # ✅ Main clean API wrapper
+│   └── Configurations/             # ✅ Strongly-typed configuration classes
+│       ├── ColumnConfiguration.cs         # ✅ Clean column definitions
+│       ├── ColorConfiguration.cs          # ✅ Clean color settings
+│       ├── ValidationConfiguration.cs     # ✅ Clean validation config
+│       ├── PerformanceConfiguration.cs    # ✅ Clean performance settings
+│       └── CleanValidationConfigAdapter.cs # ✅ Internal adapter
 ├── 📁 Modules/                     # ✅ MODULÁRNA ARCHITEKTÚRA IMPLEMENTOVANÁ
 │   ├── Table/                      # ✅ CORE TABLE MODULE (90% implementované)
 │   │   ├── Controls/
-│   │   │   ├── AdvancedDataGrid.cs         # ✅ Main UI UserControl
-│   │   │   └── AdvancedDataGrid.xaml       # ✅ XAML layout (NO hardcoded colors!)
+│   │   │   ├── AdvancedDataGrid.cs         # ✅ Main UI UserControl s DataGridUIManager integráciou
+│   │   │   └── AdvancedDataGrid.xaml       # ✅ XAML layout s proper data binding (NO hardcoded colors!)
 │   │   ├── Models/
 │   │   │   ├── CellPosition.cs             # ✅ Cell positioning model
 │   │   │   ├── CellRange.cs                # ✅ Cell range selection model
 │   │   │   ├── CellUIState.cs              # ✅ Cell UI state tracking
 │   │   │   ├── DataRow.cs                  # ✅ Row data model (hybrid storage)
-│   │   │   └── GridColumnDefinition.cs     # ✅ Column definitions
+│   │   │   ├── GridColumnDefinition.cs     # ✅ Column definitions
+│   │   │   └── GridUIModels.cs             # ✅ UI models s INotifyPropertyChanged (HeaderCellModel, DataCellModel, DataRowModel)
 │   │   └── Services/
 │   │       ├── AdvancedDataGrid.TableManagement.cs # ✅ Table management logic
 │   │       ├── AdvancedDataGridController.cs       # ✅ Main controller
 │   │       ├── DynamicTableCore.cs                 # ✅ Core headless operations
 │   │       ├── SmartColumnNameResolver.cs          # ✅ Duplicate column handling
-│   │       └── UnlimitedRowHeightManager.cs        # ✅ Row height management
+│   │       ├── UnlimitedRowHeightManager.cs        # ✅ Row height management  
+│   │       └── DataGridUIManager.cs                # ✅ Kvalitný UI rendering manager s comprehensive error logging
 │   ├── ColorTheming/               # ✅ COLOR THEMING MODULE (100% implementované)
 │   │   ├── Models/
 │   │   │   └── DataGridColorConfig.cs      # ✅ Color configuration
@@ -1250,6 +1284,56 @@ await dataGrid.InitializeAsync(columns, logger: logger);
 ---
 
 ## 🎯 PUBLIC API DESIGN
+
+### **🎯 Clean API Architecture (2025)**
+**Nová architektúra s Configuration classes namiesto internal typov:**
+
+```csharp
+// ✅ CLEAN API: Single import, strongly-typed Configuration classes
+using RpaWinUiComponentsPackage;
+using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid;
+
+// Aplikácia pracuje INOU so clean Configuration classes
+var columns = new List<ColumnConfiguration>
+{
+    new() { Name = "Name", DisplayName = "Full Name", Type = typeof(string), Width = 200 },
+    new() { Name = "Age", DisplayName = "Age", Type = typeof(int), Width = 100 }
+};
+
+var colors = new ColorConfiguration
+{
+    CellBackground = "#FFFFFF",
+    CellForeground = "#000000",
+    ValidationErrorBorder = "#FF0000"
+};
+
+var validation = new ValidationConfiguration
+{
+    EnableRealtimeValidation = true,
+    EnableBatchValidation = false
+};
+
+var performance = new PerformanceConfiguration
+{
+    MaxCachedRows = 1000,
+    EnableBackgroundProcessing = true
+};
+
+var dataGrid = new AdvancedDataGrid();
+await dataGrid.InitializeAsync(
+    columns: columns,
+    colors: colors,
+    validation: validation,
+    performance: performance,
+    logger: logger);
+```
+
+**Výhody Clean API:**
+- ✅ **IntelliSense Support** - strongly-typed Configuration classes
+- ✅ **Single Import** - `using RpaWinUiComponentsPackage;`
+- ✅ **Clean namespace** - žiadne internal typy v aplikácii
+- ✅ **Type Safety** - compile-time checking
+- ✅ **Future-proof** - internal types môžu byť menené bez breaking changes
 
 ### **📋 API Design Principles**
 

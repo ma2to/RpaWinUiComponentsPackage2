@@ -30,6 +30,12 @@
     <UseRidGraph>true</UseRidGraph>
     <WindowsPackageType>None</WindowsPackageType>
     
+    <!-- Additional PRI disabling to prevent MSB4062 error -->
+    <UseAppxBundle>false</UseAppxBundle>
+    <AppxBundle>Never</AppxBundle>
+    <_PriIndexName>resources</_PriIndexName>
+    <EnableMrtCoreTargets>false</EnableMrtCoreTargets>
+    
     <!-- Application properties -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>

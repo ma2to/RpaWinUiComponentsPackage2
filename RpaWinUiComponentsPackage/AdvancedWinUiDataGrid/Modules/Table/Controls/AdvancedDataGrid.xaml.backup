@@ -15,9 +15,8 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:BoolToVisibilityInverseConverter x:Key="BoolToVisibilityInverseConverter" />
         
-        <!-- KVALITNÉ DATATEMPLATES - NO HARDCODED COLORS! Všetko programmaticky cez Binding -->
-        
-        <!-- Header template - properly bound to HeaderCellModel with resize capability -->
+        <!-- Templates will be set programmatically from code - NO hardcoded colors! -->
+        <!-- Header template - properly bound to HeaderCellModel -->
         <DataTemplate x:Key="HeaderTemplate">
             <Border x:Name="HeaderBorder"
                     BorderThickness="0,0,1,1"
@@ -27,17 +26,14 @@
                     Width="{Binding Width}"
                     Height="32">
                 <Grid>
-                    <!-- Header text with proper typography -->
                     <TextBlock x:Name="HeaderText" 
                                Text="{Binding DisplayName}"
                                Foreground="{Binding ForegroundBrush}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"
-                               HorizontalAlignment="Left"
-                               TextTrimming="CharacterEllipsis"
-                               ToolTipService.ToolTip="{Binding DisplayName}" />
+                               HorizontalAlignment="Left" />
                     
-                    <!-- Resize handle - invisible rectangle at right edge for column resize -->
+                    <!-- Resize handle - invisible rectangle at right edge -->
                     <Rectangle x:Name="ResizeHandle"
                                Width="6"
                                HorizontalAlignment="Right"
@@ -51,14 +47,13 @@
             </Border>
         </DataTemplate>
 
-        <!-- Row template - s proper cell rendering -->
+        <!-- Row template - properly bound to DataRowModel -->
         <DataTemplate x:Key="RowTemplate">
             <Border x:Name="RowBorder"
                     Background="{Binding BackgroundBrush}"
                     BorderThickness="0,0,0,1"
                     BorderBrush="LightGray"
                     Height="32">
-                <!-- ItemsRepeater pre cells s horizontal layout -->
                 <ItemsRepeater ItemsSource="{Binding Cells}"
                                ItemTemplate="{StaticResource CellTemplate}">
                     <ItemsRepeater.Layout>
@@ -68,7 +63,7 @@
             </Border>
         </DataTemplate>
 
-        <!-- Cell template - KVALITNÉ s editability -->
+        <!-- Cell template - properly bound to DataCellModel with edit capability -->
         <DataTemplate x:Key="CellTemplate">
             <Border x:Name="CellBorder"
                     BorderThickness="0,0,1,0"
@@ -78,28 +73,42 @@
                     Width="{Binding Width}"
                     Height="32">
                 <Grid>
-                    <!-- Display mode - CLICKABLE TextBlock -->
+                    <!-- Display mode - TextBlock - CLICKABLE FOR EDITING -->
                     <TextBlock x:Name="DisplayText" 
                                Text="{Binding DisplayText}"
                                Foreground="{Binding ForegroundBrush}"
                                VerticalAlignment="Center"
-                               HorizontalAlignment="Left"
+                               HorizontalAlignment="Stretch"
                                TextTrimming="CharacterEllipsis"
-                               Margin="4,2,4,2"
+                               Margin="4,2,10,2"
+                               Background="Transparent"
                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityInverseConverter}}"
                                Tapped="DisplayText_Tapped" />
                     
                     <!-- Edit mode - TextBox -->
                     <TextBox x:Name="EditTextBox"
-                             Text="{Binding DisplayText, Mode=TwoWay}"
+                             Text="{Binding DisplayText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Foreground="{Binding ForegroundBrush}"
+                             Background="Transparent"
                              BorderThickness="0"
                              Padding="4,2"
+                             Margin="0,0,6,0"
                              VerticalAlignment="Center"
                              HorizontalAlignment="Stretch"
                              Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
                              LostFocus="EditTextBox_LostFocus"
                              KeyDown="EditTextBox_KeyDown" />
+                    
+                    <!-- Resize handle - TOP LAYER, only at right edge -->
+                    <Rectangle x:Name="CellResizeHandle"
+                               Width="8"
+                               HorizontalAlignment="Right"
+                               Fill="Transparent"
+                               PointerPressed="ResizeHandle_PointerPressed"
+                               PointerMoved="ResizeHandle_PointerMoved"
+                               PointerReleased="ResizeHandle_PointerReleased"
+                               PointerEntered="ResizeHandle_PointerEntered"
+                               PointerExited="ResizeHandle_PointerExited" />
                 </Grid>
             </Border>
         </DataTemplate>
@@ -118,7 +127,7 @@
                     <RowDefinition Height="*" />    <!-- Data area -->
                 </Grid.RowDefinitions>
                 
-                <!-- Column Headers - Fixed at top s KVALITNÝM HeaderTemplate -->
+                <!-- Column Headers - Fixed at top -->
                 <ItemsRepeater x:Name="HeaderRepeater"
                                Grid.Row="0"
                                ItemTemplate="{StaticResource HeaderTemplate}">
@@ -127,7 +136,7 @@
                     </ItemsRepeater.Layout>
                 </ItemsRepeater>
 
-                <!-- Data Grid Area - VIRTUAL SCROLLING s KVALITNÝM RowTemplate -->
+                <!-- Data Grid Area -->
                 <ItemsRepeater x:Name="DataRepeater"
                                Grid.Row="1"
                                ItemTemplate="{StaticResource RowTemplate}">

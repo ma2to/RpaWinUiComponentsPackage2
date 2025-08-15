@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Models;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Performance.Models;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Validation.Models;
@@ -75,6 +75,22 @@ public class DynamicTableCore
     public List<string> GetColumnNames()
     {
         return _columns.Select(c => c.Name).ToList();
+    }
+
+    /// <summary>
+    /// Získa všetky column definitions
+    /// </summary>
+    public List<GridColumnDefinition> GetColumnDefinitions()
+    {
+        return _columns.ToList(); // Return a copy to prevent external modification
+    }
+
+    /// <summary>
+    /// Získa column definition na danom indexe
+    /// </summary>
+    public GridColumnDefinition? GetColumnDefinition(int columnIndex)
+    {
+        return columnIndex >= 0 && columnIndex < _columns.Count ? _columns[columnIndex] : null;
     }
 
     /// <summary>
@@ -714,14 +730,40 @@ public class DynamicTableCore
     }
 
     /// <summary>
-    /// Vytvorí minimálny počet riadkov + 1 prázdny na konci
+    /// Vytvorí minimálny počet riadkov + 1 prázdny na konci s XAML safety limits
     /// </summary>
     private async Task CreateMinimumRowsAsync()
     {
-        for (int i = 0; i < _minimumRowCount + 1; i++) // +1 pre prázdny riadok na konci
+        // CRITICAL: Limit initial row creation to prevent XAML dictionary overflow
+        int safeMinimumCount = Math.Min(_minimumRowCount, 5); // TEMPORARY: Reduced for debugging WinRT COM errors
+        
+        _logger?.LogInformation("📊 ROW CREATION: Creating {SafeCount} initial rows (requested: {RequestedCount})", 
+            safeMinimumCount + 1, _minimumRowCount + 1);
+            
+        for (int i = 0; i < safeMinimumCount + 1; i++) // +1 pre prázdny riadok na konci
         {
-            _rows.Add(new DataRow(i));
+            // SAFETY CHECK: Ensure row index is safe for XAML binding
+            if (i >= 10000)
+            {
+                _logger?.LogError("🚨 XAML SAFETY: Stopping row creation at index {Index} to prevent XAML errors", i);
+                break;
+            }
+            
+            try
+            {
+                var newRow = new DataRow(i);
+                _rows.Add(newRow);
+                
+                _logger?.LogDebug("✅ ROW CREATED: Row {Index} created successfully", i);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "🚨 ROW CREATION ERROR: Failed to create row at index {Index}", i);
+                throw;
+            }
         }
+        
+        _logger?.LogInformation("✅ ROW CREATION: Created {ActualCount} rows successfully", _rows.Count);
     }
 
     /// <summary>

@@ -48,14 +48,23 @@ public class AdvancedDataGrid : Microsoft.UI.Xaml.Controls.UserControl
         var internalValidationConfig = ConvertValidationToInternal(validation);
         var internalPerformanceConfig = ConvertPerformanceToInternal(performance);
 
-        // Call internal control
+        // Call internal control with CORRECT parameter order
         await _internalControl.InitializeAsync(
-            internalColumns, internalValidationConfig, internalPerformanceConfig, 
-            emptyRowsCount, internalColorConfig, logger, 
-            validation?.EnableBatchValidation ?? false,
-            performance?.MaxSearchHistoryItems ?? 0, 
-            enableSort, enableSearch, enableFilter, 0,
-            minWidth, minHeight, maxWidth, maxHeight);
+            columns: internalColumns,
+            validationConfig: internalValidationConfig,
+            throttlingConfig: internalPerformanceConfig,
+            emptyRowsCount: emptyRowsCount,
+            colorConfig: internalColorConfig,
+            logger: logger,
+            enableBatchValidation: validation?.EnableBatchValidation ?? false,
+            enableSort: enableSort,
+            enableSearch: enableSearch,
+            enableFilter: enableFilter,
+            searchHistoryItems: performance?.MaxSearchHistoryItems ?? 0,
+            minWidth: minWidth,
+            minHeight: minHeight,
+            maxWidth: maxWidth,
+            maxHeight: maxHeight);
     }
 
     /// <summary>
@@ -152,7 +161,7 @@ public class AdvancedDataGrid : Microsoft.UI.Xaml.Controls.UserControl
     /// </summary>
     private List<InternalGridColumnDefinition> ConvertColumnsToInternal(List<ColumnConfiguration> columns)
     {
-        return columns.Select(col => new InternalGridColumnDefinition
+        var internalColumns = columns.Select(col => new InternalGridColumnDefinition
         {
             Name = col.Name ?? string.Empty,
             DataType = col.Type ?? typeof(object),
@@ -167,6 +176,26 @@ public class AdvancedDataGrid : Microsoft.UI.Xaml.Controls.UserControl
             IsVisible = col.IsVisible ?? true
             // Note: Order removed - doesn't exist in internal type
         }).ToList();
+
+        // AUTOMATIC ValidationAlerts COLUMN: Always add if not already present
+        bool hasValidationColumn = internalColumns.Any(c => c.IsValidationAlertsColumn);
+        if (!hasValidationColumn)
+        {
+            internalColumns.Add(new InternalGridColumnDefinition
+            {
+                Name = "ValidationAlerts",
+                DisplayName = "Errors",
+                DataType = typeof(string),
+                Width = 120,
+                MinWidth = 50,
+                MaxWidth = null, // No maximum - can expand infinitely 
+                IsValidationAlertsColumn = true,
+                IsReadOnly = true,
+                IsVisible = true
+            });
+        }
+
+        return internalColumns;
     }
 
     /// <summary>
