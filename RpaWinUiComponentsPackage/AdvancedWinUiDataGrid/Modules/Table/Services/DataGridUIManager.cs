@@ -2,8 +2,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Text;
+using Windows.Foundation;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Models;
 using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.ColorTheming.Models;
+using RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Utilities.Helpers;
 using System.Collections.ObjectModel;
 
 namespace RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Services;
@@ -63,7 +66,7 @@ public class DataGridUIManager
         set
         {
             _colorConfig = value ?? DataGridColorConfig.Default;
-            _logger?.LogInformation("🎨 UI CONFIG: Color configuration updated");
+            _logger?.Info("🎨 UI CONFIG: Color configuration updated");
         }
     }
 
@@ -91,7 +94,7 @@ public class DataGridUIManager
     {
         if (_isRendering)
         {
-            _logger?.LogWarning("⚠️ UI RENDER: Already rendering, skipping initialization");
+            _logger?.Warning("⚠️ UI RENDER: Already rendering, skipping initialization");
             return;
         }
 
@@ -100,12 +103,12 @@ public class DataGridUIManager
         try
         {
             _isRendering = true;
-            _logger?.LogInformation("🎨 UI INIT: Starting UI initialization...");
+            _logger?.Info("🎨 UI INIT: Starting UI initialization...");
             
             // CRITICAL: Log table core state before any operations
             if (_tableCore == null)
             {
-                _logger?.LogError("🚨 INIT ERROR: TableCore is null - cannot initialize UI");
+                _logger?.Error("🚨 INIT ERROR: TableCore is null - cannot initialize UI");
                 throw new InvalidOperationException("TableCore must be initialized before UI initialization");
             }
             
@@ -113,24 +116,24 @@ public class DataGridUIManager
             var columnCount = _tableCore.ColumnCount;
             var isInitialized = _tableCore.IsInitialized;
             
-            _logger?.LogInformation("📊 INIT STATE: TableCore.IsInitialized={IsInitialized}, ActualRowCount={ActualRowCount}, ColumnCount={ColumnCount}", 
+            _logger?.Info("📊 INIT STATE: TableCore.IsInitialized={IsInitialized}, ActualRowCount={ActualRowCount}, ColumnCount={ColumnCount}", 
                 isInitialized, actualRowCount, columnCount);
             
             if (!isInitialized)
             {
-                _logger?.LogError("🚨 INIT ERROR: TableCore is not initialized");
+                _logger?.Error("🚨 INIT ERROR: TableCore is not initialized");
                 throw new InvalidOperationException("TableCore must be initialized before UI initialization");
             }
             
             if (actualRowCount < 0 || actualRowCount > 1000000)
             {
-                _logger?.LogError("🚨 INIT ERROR: ActualRowCount out of safe range: {ActualRowCount}", actualRowCount);
+                _logger?.Error("🚨 INIT ERROR: ActualRowCount out of safe range: {ActualRowCount}", actualRowCount);
                 throw new InvalidOperationException($"ActualRowCount out of safe range: {actualRowCount}");
             }
             
             if (columnCount < 0 || columnCount > 1000)
             {
-                _logger?.LogError("🚨 INIT ERROR: ColumnCount out of safe range: {ColumnCount}", columnCount);
+                _logger?.Error("🚨 INIT ERROR: ColumnCount out of safe range: {ColumnCount}", columnCount);
                 throw new InvalidOperationException($"ColumnCount out of safe range: {columnCount}");
             }
 
@@ -138,15 +141,15 @@ public class DataGridUIManager
             var headerStopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                _logger?.LogInformation("🎨 UI INIT PHASE 1: Rendering headers...");
+                _logger?.Info("🎨 UI INIT PHASE 1: Rendering headers...");
                 await RenderHeadersAsync();
                 headerStopwatch.Stop();
-                _logger?.LogInformation("✅ UI INIT PHASE 1: Headers rendered in {ElapsedMs}ms", headerStopwatch.ElapsedMilliseconds);
+                _logger?.Info("✅ UI INIT PHASE 1: Headers rendered in {ElapsedMs}ms", headerStopwatch.ElapsedMilliseconds);
             }
             catch (Exception headerEx)
             {
                 headerStopwatch.Stop();
-                _logger?.LogError(headerEx, "🚨 UI INIT PHASE 1 ERROR: Header rendering failed after {ElapsedMs}ms", headerStopwatch.ElapsedMilliseconds);
+                _logger?.Error(headerEx, "🚨 UI INIT PHASE 1 ERROR: Header rendering failed after {ElapsedMs}ms", headerStopwatch.ElapsedMilliseconds);
                 throw;
             }
 
@@ -154,15 +157,15 @@ public class DataGridUIManager
             var rowsStopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                _logger?.LogInformation("🎨 UI INIT PHASE 2: Rendering data rows...");
+                _logger?.Info("🎨 UI INIT PHASE 2: Rendering data rows...");
                 await RenderDataRowsAsync();
                 rowsStopwatch.Stop();
-                _logger?.LogInformation("✅ UI INIT PHASE 2: Data rows rendered in {ElapsedMs}ms", rowsStopwatch.ElapsedMilliseconds);
+                _logger?.Info("✅ UI INIT PHASE 2: Data rows rendered in {ElapsedMs}ms", rowsStopwatch.ElapsedMilliseconds);
             }
             catch (Exception rowsEx)
             {
                 rowsStopwatch.Stop();
-                _logger?.LogError(rowsEx, "🚨 UI INIT PHASE 2 ERROR: Data rows rendering failed after {ElapsedMs}ms", rowsStopwatch.ElapsedMilliseconds);
+                _logger?.Error(rowsEx, "🚨 UI INIT PHASE 2 ERROR: Data rows rendering failed after {ElapsedMs}ms", rowsStopwatch.ElapsedMilliseconds);
                 throw;
             }
 
@@ -173,26 +176,26 @@ public class DataGridUIManager
             var finalRowCount = _viewportRowsCollection.Count;
             var finalCellCount = _viewportRowsCollection.Sum(r => r.Cells.Count);
             
-            _logger?.LogInformation("✅ UI INIT: UI initialization completed in {ElapsedMs}ms - Headers: {HeaderCount}, Rows: {RowCount}, Cells: {CellCount}", 
+            _logger?.Info("✅ UI INIT: UI initialization completed in {ElapsedMs}ms - Headers: {HeaderCount}, Rows: {RowCount}, Cells: {CellCount}", 
                 stopwatch.ElapsedMilliseconds, finalHeaderCount, finalRowCount, finalCellCount);
                 
             // FINAL SAFETY CHECK: Verify WinRT-safe collections are in valid state
             if (finalHeaderCount < 0 || finalHeaderCount > 100)
             {
-                _logger?.LogError("🚨 INIT FINAL ERROR: HeadersList count out of WinRT range: {Count}", finalHeaderCount);
+                _logger?.Error("🚨 INIT FINAL ERROR: HeadersList count out of WinRT range: {Count}", finalHeaderCount);
                 throw new InvalidOperationException($"HeadersList count out of WinRT range: {finalHeaderCount}");
             }
             
             if (finalRowCount < 0 || finalRowCount > 200)  // Viewport limit
             {
-                _logger?.LogError("🚨 INIT FINAL ERROR: ViewportRowsList count out of WinRT range: {Count}", finalRowCount);
+                _logger?.Error("🚨 INIT FINAL ERROR: ViewportRowsList count out of WinRT range: {Count}", finalRowCount);
                 throw new InvalidOperationException($"ViewportRowsList count out of WinRT range: {finalRowCount}");
             }
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger?.LogError(ex, "🚨 UI ERROR: UI initialization failed after {ElapsedMs}ms - TableCore state: ActualRowCount={ActualRowCount}, ColumnCount={ColumnCount}, IsInitialized={IsInitialized}", 
+            _logger?.Error(ex, "🚨 UI ERROR: UI initialization failed after {ElapsedMs}ms - TableCore state: ActualRowCount={ActualRowCount}, ColumnCount={ColumnCount}, IsInitialized={IsInitialized}", 
                 stopwatch.ElapsedMilliseconds, 
                 _tableCore?.ActualRowCount ?? -1, 
                 _tableCore?.ColumnCount ?? -1, 
@@ -212,17 +215,17 @@ public class DataGridUIManager
     {
         if (_isRendering)
         {
-            _logger?.LogWarning("⚠️ UI RENDER: Already rendering, skipping refresh");
+            _logger?.Warning("⚠️ UI RENDER: Already rendering, skipping refresh");
             return;
         }
 
         try
         {
             _isRendering = true;
-            _logger?.LogInformation("🎨 UI REFRESH: Starting full UI refresh");
+            _logger?.Info("🎨 UI REFRESH: Starting full UI refresh");
 
             // Clear existing collections (WinRT-safe ObservableCollection)
-            _logger?.LogInformation("🔄 UI CLEAR: Clearing ObservableCollections - Headers: {HeaderCount}, Rows: {RowCount}", 
+            _logger?.Info("🔄 UI CLEAR: Clearing ObservableCollections - Headers: {HeaderCount}, Rows: {RowCount}", 
                 _headersCollection.Count, _viewportRowsCollection.Count);
             
             _headersCollection.Clear();
@@ -233,26 +236,26 @@ public class DataGridUIManager
             await RenderDataRowsAsync();
             
             // CRITICAL DIAGNOSTIC: Verify collections were populated
-            _logger?.LogInformation("🎨 UI POPULATE: Collections populated - Headers: {HeaderCount}, Rows: {RowCount}", 
+            _logger?.Info("🎨 UI POPULATE: Collections populated - Headers: {HeaderCount}, Rows: {RowCount}", 
                 _headersCollection.Count, _viewportRowsCollection.Count);
                 
             if (_headersCollection.Count == 0)
             {
-                _logger?.LogError("🚨 UI ERROR: HeadersCollection is still empty after RenderHeadersAsync!");
+                _logger?.Error("🚨 UI ERROR: HeadersCollection is still empty after RenderHeadersAsync!");
             }
             
             if (_viewportRowsCollection.Count == 0)
             {
-                _logger?.LogError("🚨 UI ERROR: RowsCollection is still empty after RenderDataRowsAsync!");
+                _logger?.Error("🚨 UI ERROR: RowsCollection is still empty after RenderDataRowsAsync!");
             }
 
             _lastRenderTime = DateTime.Now;
-            _logger?.LogInformation("✅ UI REFRESH: Full UI refresh completed - Headers: {HeaderCount}, Viewport Rows: {RowCount}, Total Dataset: {TotalDataset}", 
+            _logger?.Info("✅ UI REFRESH: Full UI refresh completed - Headers: {HeaderCount}, Viewport Rows: {RowCount}, Total Dataset: {TotalDataset}", 
                 _headersCollection.Count, _viewportRowsCollection.Count, _totalDatasetSize);
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 UI ERROR: Full UI refresh failed");
+            _logger?.Error(ex, "🚨 UI ERROR: Full UI refresh failed");
             throw;
         }
         finally
@@ -268,7 +271,7 @@ public class DataGridUIManager
     {
         try
         {
-            _logger?.LogInformation("🎨 VALIDATION: Starting validation UI update for COMPLETE DATASET");
+            _logger?.Info("🎨 VALIDATION: Starting validation UI update for COMPLETE DATASET");
 
             // CRITICAL: Validation pracuje na CELOM datasete, nie len viewport
             // TableCore has complete dataset, UI shows only viewport
@@ -291,17 +294,17 @@ public class DataGridUIManager
                         // Update row-level validation
                         viewportRow.IsValid = viewportRow.Cells.All(c => c.IsValid);
                         
-                        _logger?.LogDebug("✅ VIEWPORT VALIDATION: Updated validation for visible row {RowIndex}", datasetRowIndex);
+                        _logger?.Info("✅ VIEWPORT VALIDATION: Updated validation for visible row {RowIndex}", datasetRowIndex);
                     }
                 }
             }
 
-            _logger?.LogInformation("✅ VALIDATION: Validation UI update completed for {TotalRows} dataset rows, {ViewportRows} visible in viewport", 
+            _logger?.Info("✅ VALIDATION: Validation UI update completed for {TotalRows} dataset rows, {ViewportRows} visible in viewport", 
                 _totalDatasetSize, _viewportRowsCollection.Count);
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 VALIDATION ERROR: Validation UI update failed");
+            _logger?.Error(ex, "🚨 VALIDATION ERROR: Validation UI update failed");
             throw;
         }
     }
@@ -316,7 +319,7 @@ public class DataGridUIManager
             // Check if the row is currently visible in viewport
             if (datasetRowIndex < _viewportStartIndex || datasetRowIndex > ViewportEndIndex)
             {
-                _logger?.LogDebug("🔍 VIEWPORT: Row {RowIndex} not in current viewport ({Start}-{End}), skipping UI update", 
+                _logger?.Info("🔍 VIEWPORT: Row {RowIndex} not in current viewport ({Start}-{End}), skipping UI update", 
                     datasetRowIndex, _viewportStartIndex, ViewportEndIndex);
                 return;
             }
@@ -325,19 +328,19 @@ public class DataGridUIManager
             var rowModel = _viewportRowsCollection.FirstOrDefault(r => r.RowIndex == datasetRowIndex);
             if (rowModel == null)
             {
-                _logger?.LogWarning("⚠️ VIEWPORT: Row {RowIndex} not found in viewport collection", datasetRowIndex);
+                _logger?.Warning("⚠️ VIEWPORT: Row {RowIndex} not found in viewport collection", datasetRowIndex);
                 return;
             }
 
-            _logger?.LogInformation("🎨 VIEWPORT UPDATE: Updating dataset row {RowIndex} in viewport", datasetRowIndex);
+            _logger?.Info("🎨 VIEWPORT UPDATE: Updating dataset row {RowIndex} in viewport", datasetRowIndex);
 
             await UpdateRowDataAsync(rowModel);
 
-            _logger?.LogInformation("✅ VIEWPORT UPDATE: Dataset row {RowIndex} updated in viewport", datasetRowIndex);
+            _logger?.Info("✅ VIEWPORT UPDATE: Dataset row {RowIndex} updated in viewport", datasetRowIndex);
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 VIEWPORT ERROR: Row UI update failed for dataset row {RowIndex}", datasetRowIndex);
+            _logger?.Error(ex, "🚨 VIEWPORT ERROR: Row UI update failed for dataset row {RowIndex}", datasetRowIndex);
             throw;
         }
     }
@@ -349,12 +352,12 @@ public class DataGridUIManager
     {
         if (datasetRowIndex < 0 || datasetRowIndex >= _totalDatasetSize)
         {
-            _logger?.LogWarning("⚠️ SCROLL: Invalid row index {RowIndex}, total dataset size: {TotalSize}", 
+            _logger?.Warning("⚠️ SCROLL: Invalid row index {RowIndex}, total dataset size: {TotalSize}", 
                 datasetRowIndex, _totalDatasetSize);
             return;
         }
 
-        _logger?.LogInformation("📍 SCROLL: Scrolling to dataset row {RowIndex}", datasetRowIndex);
+        _logger?.Info("📍 SCROLL: Scrolling to dataset row {RowIndex}", datasetRowIndex);
 
         // Calculate new viewport start to center the target row
         int newViewportStart = Math.Max(0, datasetRowIndex - _viewportSize / 2);
@@ -368,7 +371,7 @@ public class DataGridUIManager
         if (newViewportStart != _viewportStartIndex)
         {
             _viewportStartIndex = newViewportStart;
-            _logger?.LogInformation("📍 SCROLL: Viewport repositioned to start at {ViewportStart}", _viewportStartIndex);
+            _logger?.Info("📍 SCROLL: Viewport repositioned to start at {ViewportStart}", _viewportStartIndex);
             
             // Re-render viewport with new position
             await RenderDataRowsAsync();
@@ -385,7 +388,7 @@ public class DataGridUIManager
         if (newViewportStart != _viewportStartIndex)
         {
             _viewportStartIndex = newViewportStart;
-            _logger?.LogInformation("📍 SCROLL BY: Moved viewport by {Offset} rows to start at {ViewportStart}", 
+            _logger?.Info("📍 SCROLL BY: Moved viewport by {Offset} rows to start at {ViewportStart}", 
                 rowOffset, _viewportStartIndex);
             
             await RenderDataRowsAsync();
@@ -399,14 +402,14 @@ public class DataGridUIManager
     {
         if (newViewportSize <= 0 || newViewportSize > 200) // Safety limits
         {
-            _logger?.LogWarning("⚠️ VIEWPORT: Invalid viewport size {Size}, must be 1-200", newViewportSize);
+            _logger?.Warning("⚠️ VIEWPORT: Invalid viewport size {Size}, must be 1-200", newViewportSize);
             return;
         }
 
         if (newViewportSize != _viewportSize)
         {
             _viewportSize = newViewportSize;
-            _logger?.LogInformation("📏 VIEWPORT: Size changed to {ViewportSize} rows", _viewportSize);
+            _logger?.Info("📏 VIEWPORT: Size changed to {ViewportSize} rows", _viewportSize);
             
             // Adjust viewport start if needed
             if (_viewportStartIndex + _viewportSize > _totalDatasetSize)
@@ -429,7 +432,7 @@ public class DataGridUIManager
     {
         try
         {
-            _logger?.LogInformation("🎨 UI RENDER: Rendering headers...");
+            _logger?.Info("🎨 UI RENDER: Rendering headers...");
 
             _headersCollection.Clear();
 
@@ -457,18 +460,18 @@ public class DataGridUIManager
             ApplyValidationAlertsAutoStretch();
 
             // CRITICAL DIAGNOSTIC: Log actual header data
-            _logger?.LogInformation("✅ UI RENDER: Headers rendered - {Count} columns", _headersCollection.Count);
+            _logger?.Info("✅ UI RENDER: Headers rendered - {Count} columns", _headersCollection.Count);
             for (int i = 0; i < _headersCollection.Count; i++)
             {
                 var header = _headersCollection[i];
-                _logger?.LogInformation("📋 HEADER[{Index}]: Name='{Name}', DisplayName='{DisplayName}', Width={Width}", 
+                _logger?.Info("📋 HEADER[{Index}]: Name='{Name}', DisplayName='{DisplayName}', Width={Width}", 
                     i, header.ColumnName, header.DisplayName, header.Width);
             }
             await Task.CompletedTask; // For async consistency
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 UI ERROR: Header rendering failed");
+            _logger?.Error(ex, "🚨 UI ERROR: Header rendering failed");
             throw;
         }
     }
@@ -480,7 +483,7 @@ public class DataGridUIManager
     {
         try
         {
-            _logger?.LogInformation("🎨 UI RENDER: Starting data rows rendering...");
+            _logger?.Info("🎨 UI RENDER: Starting data rows rendering...");
             
             // CRITICAL: Log current state before any operations
             var actualRowCount = _tableCore.ActualRowCount;
@@ -489,32 +492,32 @@ public class DataGridUIManager
             // UPDATE: Set total dataset size for virtualization
             _totalDatasetSize = actualRowCount;
             
-            _logger?.LogInformation("📊 RENDER STATE: TotalDataset={TotalDataset}, ViewportStart={ViewportStart}, ViewportSize={ViewportSize}, ColumnCount={ColumnCount}", 
+            _logger?.Info("📊 RENDER STATE: TotalDataset={TotalDataset}, ViewportStart={ViewportStart}, ViewportSize={ViewportSize}, ColumnCount={ColumnCount}", 
                 _totalDatasetSize, _viewportStartIndex, _viewportSize, columnCount);
             
             // CRITICAL SAFETY CHECK: Prevent XAML ItemsRepeater Int32.MaxValue index errors
             if (actualRowCount < 0)
             {
-                _logger?.LogError("🚨 INDEX ERROR: ActualRowCount is negative: {ActualRowCount}", actualRowCount);
+                _logger?.Error("🚨 INDEX ERROR: ActualRowCount is negative: {ActualRowCount}", actualRowCount);
                 throw new InvalidOperationException($"ActualRowCount cannot be negative: {actualRowCount}");
             }
             
             // VIRTUAL SCROLLING: No limit on total dataset size - viewport handles large datasets
             if (actualRowCount > 1000000) // 1M rows safety limit for total dataset
             {
-                _logger?.LogError("🚨 DATASET ERROR: ActualRowCount exceeds maximum supported size: {ActualRowCount} > 1,000,000", actualRowCount);
+                _logger?.Error("🚨 DATASET ERROR: ActualRowCount exceeds maximum supported size: {ActualRowCount} > 1,000,000", actualRowCount);
                 throw new InvalidOperationException($"ActualRowCount exceeds maximum supported size: {actualRowCount}");
             }
             
             if (columnCount < 0)
             {
-                _logger?.LogError("🚨 INDEX ERROR: ColumnCount is negative: {ColumnCount}", columnCount);
+                _logger?.Error("🚨 INDEX ERROR: ColumnCount is negative: {ColumnCount}", columnCount);
                 throw new InvalidOperationException($"ColumnCount cannot be negative: {columnCount}");
             }
             
             if (columnCount > 100) // 100 columns safety limit for XAML binding
             {
-                _logger?.LogError("🚨 XAML BINDING ERROR: ColumnCount exceeds WinUI3 ItemsRepeater safety limit: {ColumnCount} > 100", columnCount);
+                _logger?.Error("🚨 XAML BINDING ERROR: ColumnCount exceeds WinUI3 ItemsRepeater safety limit: {ColumnCount} > 100", columnCount);
                 throw new InvalidOperationException($"ColumnCount exceeds WinUI3 ItemsRepeater safety limit: {columnCount}");
             }
             
@@ -523,20 +526,20 @@ public class DataGridUIManager
             int viewportEnd = Math.Min(_totalDatasetSize - 1, _viewportStartIndex + _viewportSize - 1);
             int viewportRowCount = Math.Max(0, viewportEnd - viewportStart + 1);
             
-            _logger?.LogInformation("📊 VIEWPORT: Rendering rows {ViewportStart} to {ViewportEnd} ({ViewportCount} rows) from total {TotalRows}", 
+            _logger?.Info("📊 VIEWPORT: Rendering rows {ViewportStart} to {ViewportEnd} ({ViewportCount} rows) from total {TotalRows}", 
                 viewportStart, viewportEnd, viewportRowCount, _totalDatasetSize);
 
             // VIRTUAL SCROLLING: Check viewport cell count instead of total
             long viewportCells = (long)viewportRowCount * columnCount;
             if (viewportCells > 10000) // 10K viewport cells safety limit  
             {
-                _logger?.LogError("🚨 VIEWPORT ERROR: Viewport cell count exceeds WinRT safety limit: {ViewportCells} > 10,000 (Rows: {Rows} × Columns: {Cols})", 
+                _logger?.Error("🚨 VIEWPORT ERROR: Viewport cell count exceeds WinRT safety limit: {ViewportCells} > 10,000 (Rows: {Rows} × Columns: {Cols})", 
                     viewportCells, viewportRowCount, columnCount);
                 throw new InvalidOperationException($"Viewport cell count exceeds WinRT safety limit: {viewportCells}");
             }
 
             _viewportRowsCollection.Clear();
-            _logger?.LogInformation("🧹 UI RENDER: Viewport cleared, rendering viewport rows {Start}-{End}", viewportStart, viewportEnd);
+            _logger?.Info("🧹 UI RENDER: Viewport cleared, rendering viewport rows {Start}-{End}", viewportStart, viewportEnd);
 
             // VIRTUAL SCROLLING: Render only viewport rows
             int viewportRowIndex = 0; // Index v rámci viewport (0-based)
@@ -548,14 +551,14 @@ public class DataGridUIManager
                     // Log progress for viewport rendering
                     if (viewportRowIndex % 20 == 0)
                     {
-                        _logger?.LogInformation("📍 VIEWPORT PROGRESS: Rendering viewport row {ViewportIndex} (dataset row {DatasetIndex})", 
+                        _logger?.Info("📍 VIEWPORT PROGRESS: Rendering viewport row {ViewportIndex} (dataset row {DatasetIndex})", 
                             viewportRowIndex, datasetRowIndex);
                     }
                     
                     // SAFETY CHECK: Verify datasetRowIndex is within dataset bounds
                     if (datasetRowIndex >= _totalDatasetSize)
                     {
-                        _logger?.LogError("🚨 VIEWPORT ERROR: DatasetRowIndex exceeds total dataset: {DatasetIndex} >= {TotalSize}", 
+                        _logger?.Error("🚨 VIEWPORT ERROR: DatasetRowIndex exceeds total dataset: {DatasetIndex} >= {TotalSize}", 
                             datasetRowIndex, _totalDatasetSize);
                         break;
                     }
@@ -566,7 +569,7 @@ public class DataGridUIManager
                         BackgroundBrush = CreateBrush(_colorConfig.CellBackgroundColor)
                     };
 
-                    _logger?.LogDebug("🎨 VIEWPORT ROW: Created DataRowModel viewport[{ViewportIndex}] = dataset[{DatasetIndex}]", 
+                    _logger?.Info("🎨 VIEWPORT ROW: Created DataRowModel viewport[{ViewportIndex}] = dataset[{DatasetIndex}]", 
                         viewportRowIndex, datasetRowIndex);
 
                     // Render cells pre tento riadok
@@ -577,11 +580,11 @@ public class DataGridUIManager
                             var columnDef = _tableCore.GetColumnDefinition(colIndex);
                             if (columnDef == null) 
                             {
-                                _logger?.LogWarning("⚠️ COLUMN WARNING: ColumnDefinition is null for colIndex {ColIndex}", colIndex);
+                                _logger?.Warning("⚠️ COLUMN WARNING: ColumnDefinition is null for colIndex {ColIndex}", colIndex);
                                 continue;
                             }
 
-                            _logger?.LogDebug("📋 VIEWPORT CELL: Processing dataset[{DatasetRow},{Col}] for column '{ColumnName}'", 
+                            _logger?.Info("📋 VIEWPORT CELL: Processing dataset[{DatasetRow},{Col}] for column '{ColumnName}'", 
                                 datasetRowIndex, colIndex, columnDef?.Name ?? "Unknown");
 
                             // IMPORTANT: Use datasetRowIndex for actual data access
@@ -606,7 +609,7 @@ public class DataGridUIManager
                                 BorderBrush = CreateBrush(_colorConfig.CellBorderColor)
                             };
 
-                            _logger?.LogDebug("🧱 VIEWPORT CELL: Created DataCellModel at dataset[{DatasetRow},{Col}] with value='{Value}'", 
+                            _logger?.Info("🧱 VIEWPORT CELL: Created DataCellModel at dataset[{DatasetRow},{Col}] with value='{Value}'", 
                                 datasetRowIndex, colIndex, cellValue?.ToString() ?? "null");
 
                             // Validation check with error handling
@@ -616,7 +619,7 @@ public class DataGridUIManager
                             }
                             catch (Exception validationEx)
                             {
-                                _logger?.LogError(validationEx, "🚨 VALIDATION ERROR: Cell validation failed [{DatasetRow},{Col}]", 
+                                _logger?.Error(validationEx, "🚨 VALIDATION ERROR: Cell validation failed [{DatasetRow},{Col}]", 
                                     datasetRowIndex, colIndex);
                                 // Continue with default validation state
                                 cellModel.IsValid = true;
@@ -627,7 +630,7 @@ public class DataGridUIManager
                         }
                         catch (Exception cellEx)
                         {
-                            _logger?.LogError(cellEx, "🚨 VIEWPORT CELL ERROR: Failed to process viewport cell [{ViewportRow},{ViewportCol}] = dataset[{DatasetRow},{DatasetCol}]", 
+                            _logger?.Error(cellEx, "🚨 VIEWPORT CELL ERROR: Failed to process viewport cell [{ViewportRow},{ViewportCol}] = dataset[{DatasetRow},{DatasetCol}]", 
                                 viewportRowIndex, colIndex, datasetRowIndex, colIndex);
                             throw;
                         }
@@ -637,41 +640,81 @@ public class DataGridUIManager
                     rowModel.IsEmpty = rowModel.Cells.All(c => string.IsNullOrEmpty(c.DisplayText));
                     rowModel.IsValid = rowModel.Cells.All(c => c.IsValid);
 
-                    _logger?.LogDebug("✅ VIEWPORT ROW COMPLETE: Viewport[{ViewportIndex}] = Dataset[{DatasetIndex}] - Cells: {CellCount}, Empty: {IsEmpty}, Valid: {IsValid}", 
-                        viewportRowIndex, datasetRowIndex, rowModel.Cells.Count, rowModel.IsEmpty, rowModel.IsValid);
+                    // ENHANCED AUTO-RESIZE: Calculate required row height based on content with force update
+                    var calculatedHeight = CalculateRowHeight(rowModel);
+                    var oldHeight = rowModel.Height;
+                    
+                    _logger?.Info("📐 HEIGHT CALCULATION: Row {Row} height calculation - Old: {OldHeight}px, New: {NewHeight}px, Changed: {Changed}", 
+                        datasetRowIndex, oldHeight, calculatedHeight, Math.Abs(oldHeight - calculatedHeight) > 0.1);
+                    
+                    // Set row height - cells will inherit from row container via VerticalAlignment="Stretch"
+                    rowModel.Height = calculatedHeight;
+                    
+                    // Log which cells have long content that triggered height increase
+                    var longContentCells = rowModel.Cells.Where(c => !string.IsNullOrEmpty(c.DisplayText) && c.DisplayText.Length > 50).ToList();
+                    if (longContentCells.Any())
+                    {
+                        _logger?.Info("📝 LONG CONTENT DETECTED: Row {Row} has {Count} cells with long content triggering height {Height}px", 
+                            datasetRowIndex, longContentCells.Count, calculatedHeight);
+                        
+                        foreach (var cell in longContentCells)
+                        {
+                            _logger?.Debug("📝 LONG CONTENT CELL: [{Row},{Col}] = '{Text}' (length: {Length})", 
+                                cell.RowIndex, cell.ColumnIndex, 
+                                cell.DisplayText?.Length > 40 ? cell.DisplayText?.Substring(0, 40) + "..." : cell.DisplayText,
+                                cell.DisplayText?.Length ?? 0);
+                        }
+                    }
+                    
+                    _logger?.Info("✅ ROW HEIGHT UPDATE: Row {Row} height set to {Height}px, cells will inherit via stretch alignment", 
+                        datasetRowIndex, calculatedHeight);
+                    
+                    // FORCE UI REFRESH: Trigger layout update if height changed significantly
+                    if (Math.Abs(oldHeight - calculatedHeight) > 1.0)
+                    {
+                        // Force property change notification by setting property again
+                        var tempHeight = rowModel.Height;
+                        rowModel.Height = tempHeight; // This will trigger SetProperty and OnPropertyChanged
+                        
+                        _logger?.Info("🔄 FORCE REFRESH: Triggered layout update for row {Row} due to significant height change", 
+                            datasetRowIndex);
+                    }
+
+                    _logger?.Info("✅ VIEWPORT ROW COMPLETE: Viewport[{ViewportIndex}] = Dataset[{DatasetIndex}] - Cells: {CellCount}, Empty: {IsEmpty}, Valid: {IsValid}, Height: {Height}", 
+                        viewportRowIndex, datasetRowIndex, rowModel.Cells.Count, rowModel.IsEmpty, rowModel.IsValid, calculatedHeight);
 
                     _viewportRowsCollection.Add(rowModel);
                     viewportRowIndex++; // Increment viewport position
                 }
                 catch (Exception rowEx)
                 {
-                    _logger?.LogError(rowEx, "🚨 VIEWPORT ROW ERROR: Failed to process viewport row {ViewportIndex} = dataset row {DatasetIndex}", 
+                    _logger?.Error(rowEx, "🚨 VIEWPORT ROW ERROR: Failed to process viewport row {ViewportIndex} = dataset row {DatasetIndex}", 
                         viewportRowIndex, datasetRowIndex);
                     throw;
                 }
             }
 
-            _logger?.LogInformation("✅ VIRTUAL SCROLLING: Viewport rendered - {ViewportRows} viewport rows from dataset rows {Start}-{End}, {CellCount} total cells", 
+            _logger?.Info("✅ VIRTUAL SCROLLING: Viewport rendered - {ViewportRows} viewport rows from dataset rows {Start}-{End}, {CellCount} total cells", 
                 _viewportRowsCollection.Count, viewportStart, viewportEnd, _viewportRowsCollection.Sum(r => r.Cells.Count));
                 
             // CRITICAL DIAGNOSTIC: Log actual row data
             for (int i = 0; i < Math.Min(3, _viewportRowsCollection.Count); i++) // Log first 3 rows
             {
                 var row = _viewportRowsCollection[i];
-                _logger?.LogInformation("📋 ROW[{Index}]: {CellCount} cells, IsEmpty={IsEmpty}", 
+                _logger?.Info("📋 ROW[{Index}]: {CellCount} cells, IsEmpty={IsEmpty}", 
                     i, row.Cells.Count, row.IsEmpty);
                     
                 for (int j = 0; j < Math.Min(4, row.Cells.Count); j++) // Log first 4 cells
                 {
                     var cell = row.Cells[j];
-                    _logger?.LogInformation("   🧱 CELL[{RowIndex},{CellIndex}]: Value='{Value}', DisplayText='{DisplayText}', Width={Width}", 
+                    _logger?.Info("   🧱 CELL[{RowIndex},{CellIndex}]: Value='{Value}', DisplayText='{DisplayText}', Width={Width}", 
                         i, j, cell.Value?.ToString() ?? "null", cell.DisplayText, cell.Width);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 UI ERROR: Data rows rendering failed - ActualRowCount: {ActualRowCount}, ColumnCount: {ColumnCount}", 
+            _logger?.Error(ex, "🚨 UI ERROR: Data rows rendering failed - ActualRowCount: {ActualRowCount}, ColumnCount: {ColumnCount}", 
                 _tableCore?.ActualRowCount ?? -1, _tableCore?.ColumnCount ?? -1);
             throw;
         }
@@ -700,7 +743,7 @@ public class DataGridUIManager
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 UI ERROR: Row data update failed for row {RowIndex}", rowModel.RowIndex);
+            _logger?.Error(ex, "🚨 UI ERROR: Row data update failed for row {RowIndex}", rowModel.RowIndex);
             throw;
         }
     }
@@ -710,14 +753,15 @@ public class DataGridUIManager
     /// </summary>
     public async Task UpdateCellValidationAsync(DataCellModel cellModel)
     {
+        var cellValue = cellModel.Value;
+        var columnName = cellModel.ColumnName;
+        var rowIndex = cellModel.RowIndex;
+        
         try
         {
             // REAL VALIDATION: Call TableCore validation logic
             try
             {
-                var cellValue = cellModel.Value;
-                var columnName = cellModel.ColumnName;
-                var rowIndex = cellModel.RowIndex;
                 
                 // Get actual validation result from TableCore
                 // For now, use simple validation - TODO: implement full validation logic
@@ -728,7 +772,7 @@ public class DataGridUIManager
                 {
                     // Generate validation error message
                     validationError = GenerateValidationErrorMessage(cellValue, columnName);
-                    _logger?.LogDebug("🚨 VALIDATION: Cell [{Row},{Col}] failed validation - Value: '{Value}', Error: '{Error}'", 
+                    _logger?.Warning("🚨 VALIDATION: Cell [{Row},{Col}] failed validation - Value: '{Value}', Error: '{Error}'", 
                         rowIndex, cellModel.ColumnIndex, cellValue?.ToString() ?? "null", validationError);
                 }
                 
@@ -737,8 +781,8 @@ public class DataGridUIManager
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "🚨 VALIDATION ERROR: Failed to validate cell [{Row},{Col}]", 
-                    cellModel.RowIndex, cellModel.ColumnIndex);
+                _logger?.Error(ex, "🚨 VALIDATION ERROR: Failed to validate cell [{Row},{Col}] - Value: '{Value}', Column: '{ColumnName}', Type: {ValueType}", 
+                    cellModel.RowIndex, cellModel.ColumnIndex, cellValue?.ToString() ?? "null", columnName, cellValue?.GetType().Name ?? "null");
                 
                 // Default to invalid on validation errors
                 cellModel.IsValid = false;
@@ -753,7 +797,7 @@ public class DataGridUIManager
                 // VALIDATION BORDER FIX: Make error border more visible with thicker border
                 cellModel.BorderThickness = new Microsoft.UI.Xaml.Thickness(2);
                 
-                _logger?.LogDebug("🚨 VALIDATION VISUAL: Applied error styling to cell [{Row},{Col}] - Border: Red, Background: Light Red", 
+                _logger?.Info("🚨 VALIDATION VISUAL: Applied error styling to cell [{Row},{Col}] - Border: Red, Background: Light Red", 
                     cellModel.RowIndex, cellModel.ColumnIndex);
             }
             else
@@ -769,14 +813,14 @@ public class DataGridUIManager
             // REALTIME VALIDATION ALERT: Update ValidationAlerts column immediately
             await UpdateValidationAlertsColumnAsync(cellModel.RowIndex, null);
             
-            _logger?.LogDebug("✅ VALIDATION UPDATE: Real-time validation completed for cell [{Row},{Col}] - Valid: {IsValid}", 
+            _logger?.Info("✅ VALIDATION UPDATE: Real-time validation completed for cell [{Row},{Col}] - Valid: {IsValid}", 
                 cellModel.RowIndex, cellModel.ColumnIndex, cellModel.IsValid);
 
             await Task.CompletedTask; // For async consistency
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 UI ERROR: Cell validation update failed for cell [{Row},{Col}]", 
+            _logger?.Error(ex, "🚨 UI ERROR: Cell validation update failed for cell [{Row},{Col}]", 
                 cellModel.RowIndex, cellModel.ColumnIndex);
             throw;
         }
@@ -809,7 +853,7 @@ public class DataGridUIManager
 
             if (validationAlertsIndex == -1)
             {
-                _logger?.LogDebug("🔍 AUTO-STRETCH: ValidationAlerts column not found, skipping auto-stretch");
+                _logger?.Info("🔍 AUTO-STRETCH: ValidationAlerts column not found, skipping auto-stretch");
                 return;
             }
 
@@ -837,60 +881,61 @@ public class DataGridUIManager
                 }
             }
 
-            // KRITICKÉ: Calculate remaining space with NO MAXIMUM LIMIT - ValidationAlerts fills all available space
+            // SPRÁVNA LOGIKA: ValidationAlerts sa natiahne podľa DeleteRows column stavu
             double remainingSpace = actualContainerWidth - totalOtherColumnsWidth;
-            double validationAlertsWidth = Math.Max(validationAlertsMinWidth, remainingSpace);
+            double validationAlertsWidth;
             
-            // Ensure ValidationAlerts width grows with container (no maximum constraint)
-            if (validationAlertsWidth < validationAlertsMinWidth)
+            if (deleteRowIndex >= 0)
             {
-                validationAlertsWidth = validationAlertsMinWidth;
+                // DeleteRows column je zobrazený - ValidationAlerts vyplní zvyšok medzi ostatnými columns a DeleteRows
+                validationAlertsWidth = Math.Max(validationAlertsMinWidth, remainingSpace);
+            }
+            else
+            {
+                // DeleteRows column nie je zobrazený - ValidationAlerts sa natiahne po koniec container elementu
+                validationAlertsWidth = Math.Max(validationAlertsMinWidth, remainingSpace);
             }
 
             // Apply the calculated width
             _headersCollection[validationAlertsIndex].Width = validationAlertsWidth;
 
-            _logger?.LogInformation("📏 AUTO-STRETCH: ValidationAlerts column width = {Width} (min: {Min}, remaining: {Remaining}, container: {Container})", 
+            _logger?.Info("📏 FIXED-STRETCH: ValidationAlerts width = {Width} (min: {Min}, remaining: {Remaining}, container: {Container}, allows horizontal scroll: TRUE)", 
                 validationAlertsWidth, validationAlertsMinWidth, remainingSpace, actualContainerWidth);
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 AUTO-STRETCH ERROR: Failed to apply ValidationAlerts auto-stretch");
+            _logger?.Error(ex, "🚨 AUTO-STRETCH ERROR: Failed to apply ValidationAlerts auto-stretch - HeaderCount: {HeaderCount}, ContainerWidth: {ContainerWidth}", 
+                _headersCollection.Count, GetActualContainerWidth());
         }
     }
     
     /// <summary>
-    /// Get actual container width dynamically - NO MAXIMUM LIMIT
-    /// ValidationAlerts fills all available space in the container
-    /// KRITICKÉ: Removes artificial width constraints - allows unlimited expansion
+    /// Get actual container width dynamically - UNLIMITED ValidationAlerts stretching
+    /// ValidationAlerts sa natiahne až po koniec container elementu (alebo po DeleteRows)
     /// </summary>
     private double GetActualContainerWidth()
     {
         try
         {
-            // STRATEGY: Responsive width calculation that grows with content
-            // NO artificial maximum limits - ValidationAlerts expands to fill ALL available space
+            // STRATEGY: Unlimited expansion pre ValidationAlerts column stretching
+            // ValidationAlerts má vyplniť všetok dostupný priestor až po koniec container elementu
             
-            // Base width calculation - scales with column count
-            double baseWidth = 1200; // Increased base width
-            double columnScaling = _headersCollection.Count * 80; // More generous per-column space
-            double contentBasedWidth = baseWidth + columnScaling;
+            // Base width calculation - generous expansion for ValidationAlerts
+            double baseWidth = 1200;
+            double columnScaling = _headersCollection.Count * 120; // Increased scaling
+            double calculatedWidth = baseWidth + columnScaling;
             
-            // UNLIMITED EXPANSION: Allow ValidationAlerts to take massive space if needed
-            // This addresses user issue: "ValidationAlerts stops stretching at maximum width"
-            double unlimitedWidth = Math.Max(contentBasedWidth, 2000); // Minimum 2000px, no maximum
+            // UNLIMITED EXPANSION: ValidationAlerts sa natiahne až po koniec container elementu
+            double containerWidth = Math.Max(calculatedWidth, 2000); // Minimum 2000px, no maximum limit
             
-            // FUTURE: Can be enhanced to read actual container measurements
-            // For now: generous width calculation ensures ValidationAlerts never hits artificial limits
-            
-            _logger?.LogDebug("📐 UNLIMITED WIDTH: Container width = {Width} (base: {Base}, scaling: {Scaling}, unlimited: TRUE)", 
-                unlimitedWidth, baseWidth, columnScaling);
+            _logger?.Info("📐 UNLIMITED CONTAINER WIDTH: {Width} (base: {Base}, scaling: {Scaling}, ValidationAlerts stretches to container end)", 
+                containerWidth, baseWidth, columnScaling);
                 
-            return unlimitedWidth;
+            return containerWidth;
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "⚠️ CONTAINER WIDTH: Failed to calculate unlimited width, using safe fallback");
+            _logger?.Error(ex, "⚠️ CONTAINER WIDTH: Failed to calculate unlimited width, using safe fallback");
             return 2000; // Safe fallback - generous width
         }
     }
@@ -919,7 +964,7 @@ public class DataGridUIManager
     {
         try
         {
-            _logger?.LogInformation("🔄 AUTO-STRETCH: Reapplying ValidationAlerts auto-stretch after resize");
+            _logger?.Info("🔄 AUTO-STRETCH: Reapplying ValidationAlerts auto-stretch after resize");
             
             // Reapply header auto-stretch
             ApplyValidationAlertsAutoStretch();
@@ -927,11 +972,11 @@ public class DataGridUIManager
             // CRITICAL: Re-render data cells with updated header widths
             await RenderDataRowsAsync();
             
-            _logger?.LogInformation("✅ AUTO-STRETCH: ValidationAlerts auto-stretch reapplied successfully");
+            _logger?.Info("✅ AUTO-STRETCH: ValidationAlerts auto-stretch reapplied successfully");
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 AUTO-STRETCH ERROR: Failed to reapply ValidationAlerts auto-stretch");
+            _logger?.Error(ex, "🚨 AUTO-STRETCH ERROR: Failed to reapply ValidationAlerts auto-stretch");
             throw;
         }
     }
@@ -944,12 +989,12 @@ public class DataGridUIManager
     {
         try
         {
-            _logger?.LogInformation("🔄 FORCE REFRESH: Forcing ValidationAlerts width refresh");
+            _logger?.Info("🔄 FORCE REFRESH: Forcing ValidationAlerts width refresh");
             ApplyValidationAlertsAutoStretch();
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 FORCE REFRESH ERROR: Failed to force ValidationAlerts width refresh");
+            _logger?.Error(ex, "🚨 FORCE REFRESH ERROR: Failed to force ValidationAlerts width refresh");
         }
     }
 
@@ -1039,7 +1084,7 @@ public class DataGridUIManager
 
             if (validationColumnIndex == -1)
             {
-                _logger?.LogWarning("⚠️ VALIDATION ALERTS: ValidationAlerts column not found");
+                _logger?.Warning("⚠️ VALIDATION ALERTS: ValidationAlerts column not found");
                 return;
             }
 
@@ -1064,14 +1109,14 @@ public class DataGridUIManager
                 validationCell.DisplayText = alertsText;  // This should trigger PropertyChanged via SetProperty
                 validationCell.Value = alertsText;        // This should trigger PropertyChanged via SetProperty
                 
-                _logger?.LogWarning("📋 VALIDATION ALERTS: Updated row {RowIndex} col {ColIndex} '{ColName}' with {ErrorCount} errors: '{Alerts}'", 
+                _logger?.Warning("📋 VALIDATION ALERTS: Updated row {RowIndex} col {ColIndex} '{ColName}' with {ErrorCount} errors: '{Alerts}'", 
                     rowIndex, validationColumnIndex, validationCell.ColumnName, rowErrors.Count, alertsText);
                 
                 // DIAGNOSTIC: Log all cell states for this row
                 for (int i = 0; i < targetRow.Cells.Count; i++)
                 {
                     var cell = targetRow.Cells[i];
-                    _logger?.LogDebug("  📝 CELL[{Index}] '{ColName}': Valid={IsValid}, Error='{Error}', Display='{Display}'", 
+                    _logger?.Info("  📝 CELL[{Index}] '{ColName}': Valid={IsValid}, Error='{Error}', Display='{Display}'", 
                         i, cell.ColumnName, cell.IsValid, cell.ValidationError ?? "null", cell.DisplayText);
                 }
             }
@@ -1080,7 +1125,8 @@ public class DataGridUIManager
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 VALIDATION ALERTS ERROR: Failed to update ValidationAlerts for row {RowIndex}", rowIndex);
+            _logger?.Error(ex, "🚨 VALIDATION ALERTS ERROR: Failed to update ValidationAlerts for row {RowIndex} - TotalRows: {TotalRows}, HeaderCount: {HeaderCount}, ViewportSize: {ViewportSize}", 
+                rowIndex, _totalDatasetSize, _headersCollection.Count, _viewportSize);
         }
     }
 
@@ -1106,6 +1152,104 @@ public class DataGridUIManager
             ViewportSize = _viewportSize,
             ViewportEndIndex = ViewportEndIndex
         };
+    }
+
+    /// <summary>
+    /// Calculate required height for cell content based on text wrapping
+    /// </summary>
+    private double CalculateRequiredCellHeight(string text, double maxWidth, double minWidth = 60)
+    {
+        try
+        {
+            // Ensure minimum column width is respected
+            var availableWidth = Math.Max(maxWidth, minWidth);
+            
+            // Account for cell padding (6px left + 6px right = 12px total)
+            var textWidth = availableWidth - 12;
+            
+            _logger?.Debug("📐 CELL HEIGHT CALC DEBUG: Text='{Text}', MaxWidth={MaxWidth}, TextWidth={TextWidth}", 
+                text?.Length > 100 ? text?.Substring(0, 100) + "..." : text, maxWidth, textWidth);
+            
+            if (string.IsNullOrEmpty(text) || textWidth <= 0)
+            {
+                _logger?.Debug("📐 CELL HEIGHT DEBUG: Empty text or invalid width → 32px");
+                return 32; // Minimum row height
+            }
+
+            // Create a TextBlock to measure text
+            var textBlock = new TextBlock
+            {
+                Text = text,
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                Width = textWidth,
+                FontSize = 14, // Default font size
+                FontFamily = new FontFamily("Segoe UI"), // Default font
+                Padding = new Microsoft.UI.Xaml.Thickness(0),
+                Margin = new Microsoft.UI.Xaml.Thickness(0)
+            };
+
+            // Measure the text
+            textBlock.Measure(new Size(textWidth, double.PositiveInfinity));
+            var measuredHeight = textBlock.DesiredSize.Height;
+            
+            // Add padding (top + bottom = 4px total) and ensure minimum height
+            var requiredHeight = Math.Max(measuredHeight + 8, 32);
+            
+            // ENHANCED LOGGING: Check if text will wrap and log more details
+            var willWrap = measuredHeight > 32; // If measured height > minimum, text is wrapping
+            var textLines = text.Split('\n').Length;
+            
+            _logger?.Info("📐 CELL HEIGHT ANALYSIS: Text='{Text}' | Width={Width}px | MeasuredHeight={MeasuredHeight}px | FinalHeight={RequiredHeight}px | WillWrap={WillWrap} | TextLines={TextLines}", 
+                text.Length > 30 ? text.Substring(0, 30) + "..." : text, 
+                textWidth, measuredHeight, requiredHeight, willWrap, textLines);
+                
+            if (willWrap)
+            {
+                _logger?.Info("🔄 TEXT WRAPPING: Content requires wrapping - Height increased from 32px to {RequiredHeight}px", requiredHeight);
+            }
+            
+            return requiredHeight;
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 HEIGHT CALC ERROR: Failed to calculate height for text - TextLength: {TextLength}, MaxWidth: {MaxWidth}, MinWidth: {MinWidth}", 
+                text?.Length ?? 0, maxWidth, minWidth);
+            return 32; // Fallback to minimum height
+        }
+    }
+
+    /// <summary>
+    /// Calculate maximum required height for all cells in a row
+    /// </summary>
+    private double CalculateRowHeight(DataRowModel rowModel)
+    {
+        try
+        {
+            double maxHeight = 32; // Minimum row height
+            
+            _logger?.Debug("📐 ROW HEIGHT START DEBUG: Calculating height for row {Row} with {CellCount} cells", 
+                rowModel.RowIndex, rowModel.Cells.Count);
+            
+            foreach (var cell in rowModel.Cells)
+            {
+                var cellHeight = CalculateRequiredCellHeight(cell.DisplayText, cell.Width);
+                _logger?.Debug("📐 CELL HEIGHT DEBUG: Cell [{Row},{Col}] = '{Text}' → {Height}px (width: {Width}px)", 
+                    rowModel.RowIndex, cell.ColumnIndex, 
+                    cell.DisplayText?.Length > 50 ? cell.DisplayText?.Substring(0, 50) + "..." : cell.DisplayText,
+                    cellHeight, cell.Width);
+                maxHeight = Math.Max(maxHeight, cellHeight);
+            }
+            
+            _logger?.Debug("📐 ROW HEIGHT RESULT DEBUG: Row {Row} final height = {Height}px", 
+                rowModel.RowIndex, maxHeight);
+            
+            return maxHeight;
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 ROW HEIGHT CALC ERROR: Failed to calculate row height");
+            return 32; // Fallback to minimum height
+        }
     }
 
     #endregion

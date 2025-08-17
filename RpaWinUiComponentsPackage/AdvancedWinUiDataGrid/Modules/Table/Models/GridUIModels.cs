@@ -99,8 +99,10 @@ public class DataCellModel : INotifyPropertyChanged
     private bool _isEditing = false;
     private bool _isSelected = false;
     private bool _isFocused = false;
+    private bool _isCopied = false;
     private string? _validationError;
     private double _width = 100; // Width for proper header/cell alignment
+    private double _height = 32; // Dynamic height for auto-resize
     private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.White);
     private SolidColorBrush _foregroundBrush = new SolidColorBrush(Colors.Black);
     private SolidColorBrush _borderBrush = new SolidColorBrush(Colors.LightGray);
@@ -166,6 +168,12 @@ public class DataCellModel : INotifyPropertyChanged
         set => SetProperty(ref _isFocused, value);
     }
 
+    public bool IsCopied
+    {
+        get => _isCopied;
+        set => SetProperty(ref _isCopied, value);
+    }
+
     public string? ValidationError
     {
         get => _validationError;
@@ -176,6 +184,12 @@ public class DataCellModel : INotifyPropertyChanged
     {
         get => _width;
         set => SetProperty(ref _width, value);
+    }
+
+    public double Height
+    {
+        get => _height;
+        set => SetProperty(ref _height, value);
     }
 
     public SolidColorBrush BackgroundBrush
@@ -227,6 +241,7 @@ public class DataRowModel : INotifyPropertyChanged
     private bool _isSelected = false;
     private bool _isValid = true;
     private bool _isEmpty = true;
+    private double _height = 32; // Dynamic row height for auto-resize
     private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.White);
 
     public int RowIndex
@@ -253,6 +268,12 @@ public class DataRowModel : INotifyPropertyChanged
     {
         get => _isEmpty;
         set => SetProperty(ref _isEmpty, value);
+    }
+
+    public double Height
+    {
+        get => _height;
+        set => SetProperty(ref _height, value);
     }
 
     public SolidColorBrush BackgroundBrush

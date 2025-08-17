@@ -240,8 +240,17 @@ public class UnlimitedRowHeightManager
     /// </summary>
     public void UpdateColumnWidth(string columnName, double newWidth)
     {
-        _columnWidths[columnName] = Math.Max(newWidth, 50);
-        _logger?.Info("📐 ROW HEIGHT: Column width updated - {Column}: {Width}px", columnName, newWidth);
+        try
+        {
+            _columnWidths[columnName] = Math.Max(newWidth, 50);
+            _logger?.Info("📐 ROW HEIGHT: Column width updated - {Column}: {Width}px", columnName, newWidth);
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 ROW HEIGHT ERROR: Failed to update column width - Column: {Column}, Width: {Width}", 
+                columnName, newWidth);
+            throw;
+        }
     }
 
     /// <summary>
@@ -249,8 +258,17 @@ public class UnlimitedRowHeightManager
     /// </summary>
     public void ResetToBaseHeight()
     {
-        _currentUnifiedRowHeight = _baseRowHeight;
-        _logger?.Info("📐 ROW HEIGHT: Reset to base height {Height}px", _baseRowHeight);
+        try
+        {
+            _currentUnifiedRowHeight = _baseRowHeight;
+            _logger?.Info("📐 ROW HEIGHT: Reset to base height {Height}px", _baseRowHeight);
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 ROW HEIGHT ERROR: Failed to reset to base height - BaseHeight: {BaseHeight}px", 
+                _baseRowHeight);
+            throw;
+        }
     }
 
     #endregion
@@ -262,21 +280,30 @@ public class UnlimitedRowHeightManager
     /// </summary>
     private async Task<double> MeasureRowContentHeightAsync(Dictionary<string, object?> rowData)
     {
-        double maxCellHeight = _baseRowHeight;
-
-        foreach (var kvp in rowData)
+        try
         {
-            var columnName = kvp.Key;
-            var cellValue = kvp.Value;
+            double maxCellHeight = _baseRowHeight;
 
-            var cellHeight = await MeasureCellContentHeightAsync(cellValue, columnName);
-            if (cellHeight > maxCellHeight)
+            foreach (var kvp in rowData)
             {
-                maxCellHeight = cellHeight;
-            }
-        }
+                var columnName = kvp.Key;
+                var cellValue = kvp.Value;
 
-        return maxCellHeight;
+                var cellHeight = await MeasureCellContentHeightAsync(cellValue, columnName);
+                if (cellHeight > maxCellHeight)
+                {
+                    maxCellHeight = cellHeight;
+                }
+            }
+
+            return maxCellHeight;
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 ROW HEIGHT ERROR: Failed to measure row content height - DataKeys: {Keys}", 
+                rowData?.Keys != null ? string.Join(", ", rowData.Keys) : "null");
+            return _baseRowHeight; // Safe fallback
+        }
     }
 
     /// <summary>

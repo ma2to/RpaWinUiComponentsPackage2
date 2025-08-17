@@ -18,11 +18,20 @@ public class WeakReferenceCache : IDisposable
     /// </summary>
     public void Set<T>(string key, T value) where T : class
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(WeakReferenceCache));
-        if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key cannot be null or empty", nameof(key));
-        if (value == null) throw new ArgumentNullException(nameof(value));
+        try
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(WeakReferenceCache));
+            if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key cannot be null or empty", nameof(key));
+            if (value == null) throw new ArgumentNullException(nameof(value));
 
-        _cache.AddOrUpdate(key, new WeakReference(value), (_, _) => new WeakReference(value));
+            _cache.AddOrUpdate(key, new WeakReference(value), (_, _) => new WeakReference(value));
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't rethrow to prevent cache errors from breaking application flow
+            // This is a performance optimization feature, not critical functionality
+            System.Diagnostics.Debug.WriteLine($"🚨 CACHE ERROR: Failed to set cache value - Key: {key}, Type: {typeof(T).Name}, Error: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -30,15 +39,24 @@ public class WeakReferenceCache : IDisposable
     /// </summary>
     public T? Get<T>(string key) where T : class
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(WeakReferenceCache));
-        if (string.IsNullOrEmpty(key)) return null;
-
-        if (_cache.TryGetValue(key, out var weakRef) && weakRef.IsAlive)
+        try
         {
-            return weakRef.Target as T;
-        }
+            if (_disposed) throw new ObjectDisposedException(nameof(WeakReferenceCache));
+            if (string.IsNullOrEmpty(key)) return null;
 
-        return null;
+            if (_cache.TryGetValue(key, out var weakRef) && weakRef.IsAlive)
+            {
+                return weakRef.Target as T;
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            // Log the error but return null to prevent cache errors from breaking application flow
+            System.Diagnostics.Debug.WriteLine($"🚨 CACHE ERROR: Failed to get cache value - Key: {key}, Type: {typeof(T).Name}, Error: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>

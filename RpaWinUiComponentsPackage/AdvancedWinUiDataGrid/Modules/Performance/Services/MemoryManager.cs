@@ -68,7 +68,8 @@ public class MemoryManager : IDisposable
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "🚨 MEMORY ERROR: Failed to return cell to pool");
+            _logger?.LogError(ex, "🚨 MEMORY ERROR: Failed to return cell to pool - TotalMemory: {MemoryMB}MB", 
+                GC.GetTotalMemory(false) / 1024 / 1024);
         }
     }
 

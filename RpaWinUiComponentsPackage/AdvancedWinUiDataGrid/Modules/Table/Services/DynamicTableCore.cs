@@ -194,12 +194,21 @@ public class DynamicTableCore
     /// </summary>
     public async Task<object?> GetCellValueAsync(int row, int column)
     {
-        ValidatePosition(row, column);
-        
-        var dataRow = _rows[row];
-        var columnName = _columns[column].Name;
-        
-        return dataRow.GetCellValue(columnName);
+        try
+        {
+            ValidatePosition(row, column);
+            
+            var dataRow = _rows[row];
+            var columnName = _columns[column].Name;
+            
+            return dataRow.GetCellValue(columnName);
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 CELL ACCESS ERROR: Failed to get cell value - Row: {Row}, Column: {Column}, TotalRows: {TotalRows}, TotalColumns: {TotalColumns}", 
+                row, column, _rows.Count, _columns.Count);
+            throw;
+        }
     }
 
     /// <summary>
@@ -241,8 +250,17 @@ public class DynamicTableCore
     /// </summary>
     public async Task<Dictionary<string, object?>> GetRowDataAsync(int rowIndex)
     {
-        ValidateRowIndex(rowIndex);
-        return _rows[rowIndex].GetAllData();
+        try
+        {
+            ValidateRowIndex(rowIndex);
+            return _rows[rowIndex].GetAllData();
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 ROW ACCESS ERROR: Failed to get row data - Row: {Row}, TotalRows: {TotalRows}, TotalColumns: {TotalColumns}", 
+                rowIndex, _rows.Count, _columns.Count);
+            throw;
+        }
     }
 
     /// <summary>
@@ -250,14 +268,26 @@ public class DynamicTableCore
     /// </summary>
     public async Task SetRowDataAsync(int rowIndex, Dictionary<string, object?> data)
     {
-        ValidateRowIndex(rowIndex);
-        _rows[rowIndex].SetAllData(data);
-
-        // Auto-expand logic
-        var dataRow = _rows[rowIndex];
-        if (rowIndex == _rows.Count - 1 && !dataRow.IsEmpty)
+        try
         {
-            await AddEmptyRowAsync();
+            ValidateRowIndex(rowIndex);
+            _rows[rowIndex].SetAllData(data);
+
+            // Auto-expand logic
+            var dataRow = _rows[rowIndex];
+            if (rowIndex == _rows.Count - 1 && !dataRow.IsEmpty)
+            {
+                await AddEmptyRowAsync();
+            }
+            
+            _logger?.Info("📊 ROW DATA: Row data updated - Row: {Row}, DataKeys: {Keys}", 
+                rowIndex, string.Join(", ", data.Keys));
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "🚨 ROW UPDATE ERROR: Failed to set row data - Row: {Row}, DataKeys: {Keys}, TotalRows: {TotalRows}", 
+                rowIndex, data?.Keys != null ? string.Join(", ", data.Keys) : "null", _rows.Count);
+            throw;
         }
     }
 
@@ -737,7 +767,7 @@ public class DynamicTableCore
         // FIXED: UI thread issues resolved, can now use full row count
         int safeMinimumCount = _minimumRowCount; // RestoreD: Full empty rows count for proper cell interaction
         
-        _logger?.LogInformation("📊 ROW CREATION: Creating {SafeCount} initial rows (requested: {RequestedCount})", 
+        _logger?.Info("📊 ROW CREATION: Creating {SafeCount} initial rows (requested: {RequestedCount})", 
             safeMinimumCount + 1, _minimumRowCount + 1);
             
         for (int i = 0; i < safeMinimumCount + 1; i++) // +1 pre prázdny riadok na konci
@@ -745,7 +775,7 @@ public class DynamicTableCore
             // SAFETY CHECK: Ensure row index is safe for XAML binding
             if (i >= 10000)
             {
-                _logger?.LogError("🚨 XAML SAFETY: Stopping row creation at index {Index} to prevent XAML errors", i);
+                _logger?.Error("🚨 XAML SAFETY: Stopping row creation at index {Index} to prevent XAML errors", i);
                 break;
             }
             
@@ -754,16 +784,17 @@ public class DynamicTableCore
                 var newRow = new DataRow(i);
                 _rows.Add(newRow);
                 
-                _logger?.LogDebug("✅ ROW CREATED: Row {Index} created successfully", i);
+                _logger?.Info("✅ ROW CREATED: Row {Index} created successfully", i);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "🚨 ROW CREATION ERROR: Failed to create row at index {Index}", i);
+                _logger?.Error(ex, "🚨 ROW CREATION ERROR: Failed to create row at index {Index} - TotalRowsRequested: {TotalRows}, ColumnCount: {ColumnCount}, MemoryUsage: {MemoryMB}MB", 
+                    i, _minimumRowCount, _columns.Count, GC.GetTotalMemory(false) / 1024 / 1024);
                 throw;
             }
         }
         
-        _logger?.LogInformation("✅ ROW CREATION: Created {ActualCount} rows successfully", _rows.Count);
+        _logger?.Info("✅ ROW CREATION: Created {ActualCount} rows successfully", _rows.Count);
     }
 
     /// <summary>

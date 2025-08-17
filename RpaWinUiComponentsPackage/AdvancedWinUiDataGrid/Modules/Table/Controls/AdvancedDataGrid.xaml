@@ -8,7 +8,12 @@
     xmlns:converters="using:RpaWinUiComponentsPackage.AdvancedWinUiDataGrid.Modules.Table.Converters"
     mc:Ignorable="d"
     d:DesignHeight="300"
-    d:DesignWidth="400">
+    d:DesignWidth="400"
+    PointerMoved="DataGrid_PointerMoved"
+    PointerReleased="DataGrid_PointerReleased"
+    KeyDown="AdvancedDataGrid_KeyDown"
+    IsTabStop="True"
+    UseSystemFocusVisuals="True">
 
     <UserControl.Resources>
         <!-- Converters for cell editing visibility -->
@@ -58,7 +63,8 @@
                     Background="{Binding BackgroundBrush}"
                     BorderThickness="0,0,0,1"
                     BorderBrush="LightGray"
-                    Height="32">
+                    Height="{Binding Height}"
+                    MinHeight="32">
                 <!-- ItemsRepeater pre cells s horizontal layout -->
                 <ItemsRepeater ItemsSource="{Binding Cells}"
                                ItemTemplate="{StaticResource CellTemplate}">
@@ -77,27 +83,29 @@
                     Background="{Binding BackgroundBrush}"
                     BorderBrush="{Binding BorderBrush}"
                     Width="{Binding Width}"
-                    Height="32"
+                    VerticalAlignment="Stretch"
+                    MinHeight="32"
                     RightTapped="CellBorder_RightTapped"
-                    PointerPressed="CellBorder_PointerPressed"
-                    PointerMoved="CellBorder_PointerMoved"
-                    PointerReleased="CellBorder_PointerReleased">
+                    PointerPressed="CellBorder_PointerPressed">
                 <Grid>
-                    <!-- Display mode - FULL CLICKABLE AREA -->
+                    <!-- Display mode - FULL CLICKABLE AREA with proper text wrapping -->
                     <Grid x:Name="DisplayArea"
                           Background="Transparent"
+                          VerticalAlignment="Stretch"
+                          HorizontalAlignment="Stretch"
                           Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityInverseConverter}}">
                         <TextBlock x:Name="DisplayText" 
                                    Text="{Binding DisplayText}"
                                    Foreground="{Binding ForegroundBrush}"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Left"
-                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Stretch"
+                                   HorizontalAlignment="Stretch"
+                                   TextWrapping="Wrap"
                                    Margin="4,2,4,2"
-                                   IsHitTestVisible="False" />
+                                   IsHitTestVisible="False"
+                                   MaxLines="0" />
                     </Grid>
                     
-                    <!-- Edit mode - TextBox -->
+                    <!-- Edit mode - TextBox with proper text wrapping -->
                     <TextBox x:Name="EditTextBox"
                              Text="{Binding DisplayText, Mode=TwoWay}"
                              Foreground="{Binding ForegroundBrush}"
@@ -111,9 +119,11 @@
                              TextChanged="EditTextBox_TextChanged"
                              IsSpellCheckEnabled="False"
                              IsTextPredictionEnabled="False"
-                             AcceptsReturn="False"
+                             AcceptsReturn="True"
                              TextWrapping="Wrap"
                              VerticalContentAlignment="Top"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              Header=""
                              PlaceholderText=""
                              ContextFlyout="{x:Null}" />

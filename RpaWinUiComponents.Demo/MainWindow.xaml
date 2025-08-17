@@ -9,8 +9,8 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>      <!-- Controls -->
-            <RowDefinition Height="*"/>         <!-- DataGrid -->
-            <RowDefinition Height="200"/>       <!-- Logs -->
+            <RowDefinition Height="*" MinHeight="200"/>         <!-- DataGrid -->
+            <RowDefinition Height="200"/>       <!-- Logs - fixed height with internal scroll -->
         </Grid.RowDefinitions>
 
         <!-- Test Controls Panel -->

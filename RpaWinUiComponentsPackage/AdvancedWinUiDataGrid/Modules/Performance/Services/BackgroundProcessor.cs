@@ -48,20 +48,29 @@ public class BackgroundProcessor : IDisposable
     /// </summary>
     public void EnqueueTask(BackgroundTask task)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(BackgroundProcessor));
-        if (task == null) throw new ArgumentNullException(nameof(task));
-
-        if (!_config.EnableBackgroundProcessing)
+        try
         {
-            _logger?.LogTrace("⚡ BACKGROUND: Background processing disabled, skipping task '{TaskName}'", task.Name);
-            return;
-        }
+            if (_disposed) throw new ObjectDisposedException(nameof(BackgroundProcessor));
+            if (task == null) throw new ArgumentNullException(nameof(task));
 
-        task.QueuedAt = DateTime.UtcNow;
-        _taskQueue.Enqueue(task);
-        
-        _logger?.LogTrace("⚡ BACKGROUND: Task '{TaskName}' queued - Priority: {Priority}, Queue size: {QueueSize}",
-            task.Name, task.Priority, _taskQueue.Count);
+            if (!_config.EnableBackgroundProcessing)
+            {
+                _logger?.LogTrace("⚡ BACKGROUND: Background processing disabled, skipping task '{TaskName}'", task.Name);
+                return;
+            }
+
+            task.QueuedAt = DateTime.UtcNow;
+            _taskQueue.Enqueue(task);
+            
+            _logger?.LogTrace("⚡ BACKGROUND: Task '{TaskName}' queued - Priority: {Priority}, Queue size: {QueueSize}",
+                task.Name, task.Priority, _taskQueue.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "🚨 BACKGROUND ERROR: Failed to enqueue task - TaskName: '{TaskName}', QueueSize: {QueueSize}", 
+                task?.Name ?? "null", _taskQueue.Count);
+            throw;
+        }
     }
 
     /// <summary>
